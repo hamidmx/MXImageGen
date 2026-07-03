@@ -380,6 +380,21 @@
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
   }
+  .card .thumb .retry-info {
+    position: absolute;
+    bottom: 8px; left: 8px; right: 8px;
+    font-size: 10px;
+    color: #92400e;
+    background: rgba(254, 243, 199, 0.95);
+    border: 1px solid #fcd34d;
+    padding: 4px 6px;
+    border-radius: 4px;
+    text-align: center;
+    font-weight: 600;
+    line-height: 1.3;
+    pointer-events: none;
+    z-index: 2;
+  }
   @keyframes spin { to { transform: rotate(360deg); } }
   .card .label {
     padding: 10px 12px 6px;
@@ -543,6 +558,7 @@
           <option value="pro" selected>Nano Banana Pro</option>
           <option value="v2">Nano Banana 2</option>
           <option value="openai_image_2">ChatGPT Image 2.0</option>
+          <option value="ideogram_v3">Ideogram V3 (needs local proxy)</option>
         </select>
       </div>
 
@@ -623,7 +639,8 @@ const CUSTOM_RATIO_DEFAULT = "333:215";
 const MODEL_MAP = {
   pro: "gemini-3-pro-image-preview",
   v2: "gemini-3.1-flash-image-preview",
-  openai_image_2: "gpt-image-2"
+  openai_image_2: "gpt-image-2",
+  ideogram_v3: "ideogram-v3"
 };
 
 const SUPPORTED_RATIOS = {
@@ -631,7 +648,10 @@ const SUPPORTED_RATIOS = {
   v2:  ["1:1", "2:3", "3:2", "3:4", "4:3", "4:5", "5:4", "9:16", "16:9", "21:9"],
   // gpt-image-2 supports flexible sizes but only three are priced in the official table:
   // 1024x1024 (1:1), 1024x1536 (2:3), 1536x1024 (3:2). We restrict the dropdown to those.
-  openai_image_2: ["1:1", "2:3", "3:2"]
+  openai_image_2: ["1:1", "2:3", "3:2"],
+  // Ideogram v3 supports a fixed enum of aspect ratios (colon becomes "x" in
+  // the API call). We surface them all in the dropdown.
+  ideogram_v3: ["1:1", "2:3", "3:2", "3:4", "4:3", "9:16", "16:9", "10:16", "16:10"]
 };
 
 // Map UI aspect ratio → OpenAI gpt-image-2 size string (W x H in pixels).
@@ -642,6 +662,51 @@ const OPENAI_RATIO_TO_SIZE = {
 };
 // Map UI quality (1K/2K/4K) → OpenAI quality tier (low/medium/high).
 const OPENAI_QUALITY_MAP = { "1K": "low", "2K": "medium", "4K": "high" };
+
+// Ideogram v3 config.
+// The API accepts multipart/form-data at this endpoint with an `Api-Key` header.
+// See: https://developer.ideogram.ai/api-reference/api-reference/generate-v3
+//
+// CORS note: Ideogram's public API does NOT send Access-Control-Allow-Origin,
+// so a direct browser fetch from this static index.html is blocked with
+// "Failed to fetch". To use Ideogram you must run the tiny Python proxy that
+// sits beside this file:
+//
+//   python3 cors-proxy.py
+//
+// (default port 8787). The proxy forwards the request to Ideogram and adds
+// the CORS header on the way back. If the proxy isn't running the code below
+// catches the fetch error and shows a friendly "start the proxy" message
+// instead of the raw browser error.
+const IDEOGRAM_API_KEY = "zcc6S0TjqKKz9ThMQGo-Pc4kRFBIGdlFWdwT2ya5v0jYuzXW6yNCYw8puzpkZ0OKiNqZZpnOVm1LPtlaK4mHkw";
+const IDEOGRAM_PROXY_BASE = "http://localhost:8787";
+const IDEOGRAM_UPSTREAM = "https://api.ideogram.ai/v1/ideogram-v3/generate";
+const IDEOGRAM_API_BASE = `${IDEOGRAM_PROXY_BASE}/proxy?url=${encodeURIComponent(IDEOGRAM_UPSTREAM)}`;
+// Map UI colon ratios → Ideogram v3 API "x"-style enum values.
+const IDEOGRAM_RATIO_TO_API = {
+  "1:1":   "1x1",
+  "2:3":   "2x3",
+  "3:2":   "3x2",
+  "3:4":   "3x4",
+  "4:3":   "4x3",
+  "9:16":  "9x16",
+  "16:9":  "16x9",
+  "10:16": "10x16",
+  "16:10": "16x10"
+};
+// The Ideogram Quality dropdown surfaces the rendering-speed tiers.
+// Values are the API enum, labels are what the user sees.
+const IDEOGRAM_QUALITY_OPTIONS = [
+  { value: "TURBO",   label: "Turbo" },
+  { value: "DEFAULT", label: "Default" },
+  { value: "QUALITY", label: "Quality" }
+];
+// Per-image USD price for Ideogram v3 (public pricing, 2025).
+const IDEOGRAM_PRICING = {
+  TURBO:   0.03,
+  DEFAULT: 0.06,
+  QUALITY: 0.09
+};
 
 const CONFIGS_STORAGE_KEY = "howtodraw_saved_configs_v1";
 const COST_STORAGE_KEY = "howtodraw_total_cost_v1"; // sessionStorage — per-tab
@@ -1291,7 +1356,7 @@ function buildOpenAIPrompt(template, vars, subject) {
 /* ===========================================================
    Gemini API call
    =========================================================== */
-async function callGeminiImage(modelKey, staticText, dynamicText, selectedRatio, quality) {
+async function callGeminiImage(modelKey, staticText, dynamicText, selectedRatio, quality, onRateLimited) {
   const modelId = MODEL_MAP[modelKey];
   const supported = SUPPORTED_RATIOS[modelKey] || [];
   const apiRatio = supported.includes(selectedRatio) ? selectedRatio : API_FALLBACK_RATIO;
@@ -1312,26 +1377,47 @@ async function callGeminiImage(modelKey, staticText, dynamicText, selectedRatio,
       imageConfig: { aspectRatio: apiRatio, imageSize: imageSize }
     }
   };
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 120000);
+
   let resp;
-  try {
-    resp = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-      signal: controller.signal,
-      cache: "no-store",
-      keepalive: false
-    });
-  } catch (e) {
+  let lastErrText = "";
+  let attempt = 0;
+  while (true) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 120000);
+    try {
+      resp = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+        cache: "no-store",
+        keepalive: false
+      });
+    } catch (e) {
+      clearTimeout(timeoutId);
+      if (e.name === "AbortError") throw new Error("Request timed out after 120s");
+      throw e;
+    }
     clearTimeout(timeoutId);
-    if (e.name === "AbortError") throw new Error("Request timed out after 120s");
-    throw e;
+
+    if (!resp.ok && attempt < API_RETRY_MAX_ATTEMPTS) {
+      lastErrText = await resp.text().catch(() => "");
+      if (isRetriableApiError(resp.status, lastErrText)) {
+        attempt += 1;
+        const waitMs = API_RETRY_WAIT_MS;
+        console.warn(`[Gemini ${resp.status}] retriable error, retrying in ${waitMs / 1000}s (attempt ${attempt}/${API_RETRY_MAX_ATTEMPTS}) — ${lastErrText.slice(0, 200)}`);
+        if (typeof onRateLimited === "function") {
+          try { onRateLimited({ attempt, max: API_RETRY_MAX_ATTEMPTS, waitMs }); } catch (_) {}
+        }
+        await new Promise(r => setTimeout(r, waitMs));
+        continue;
+      }
+    }
+    break;
   }
-  clearTimeout(timeoutId);
+
   if (!resp.ok) {
-    const txt = await resp.text().catch(() => "");
+    const txt = lastErrText || (await resp.text().catch(() => ""));
     throw new Error(`HTTP ${resp.status}: ${txt.slice(0, 300)}`);
   }
   const data = await resp.json();
@@ -1357,13 +1443,42 @@ async function callGeminiImage(modelKey, staticText, dynamicText, selectedRatio,
    Returns { dataUrl, base64, mime, openaiSize, openaiQuality } so the
    caller can record the exact per-image cost.
    =========================================================== */
-// Tier-1 OpenAI accounts hit 5 RPM on gpt-image-2. When the API answers HTTP
-// 429 we transparently wait OPENAI_RATELIMIT_RETRY_MS and try again, up to
-// OPENAI_RATELIMIT_MAX_RETRIES extra attempts. Other errors bubble up immediately.
-const OPENAI_RATELIMIT_RETRY_MS = 15000;
-const OPENAI_RATELIMIT_MAX_RETRIES = 6; // up to 7 total attempts (~1.5 min of 429s)
+// Shared retry policy for ALL image-model calls (OpenAI gpt-image-2,
+// Gemini Nano Banana 2, Gemini Nano Banana Pro). The retry only fires
+// for two specific transient conditions:
+//   (a) USAGE LIMIT  — HTTP 429, body mentions "rate limit" / "quota" /
+//       "RESOURCE_EXHAUSTED" / "usage limit"
+//   (b) HEAVY DEMAND — HTTP 503, body mentions "overloaded" / "heavy
+//       demand" / "service unavailable" / "currently unavailable"
+// All other errors (invalid request, timeout, network failure, etc.) bubble
+// up immediately so the user sees the real problem.
+const API_RETRY_MAX_ATTEMPTS = 4;       // up to 5 total attempts (1 + 4 retries)
+const API_RETRY_WAIT_MS = 10000;        // fixed 10-second wait between retries
 
-async function callOpenAIImage(modelKey, tpl, vars, subject, selectedRatio, quality) {
+const API_RETRY_STATUS_CODES = new Set([429, 503]);
+const API_RETRY_BODY_PATTERNS = [
+  /rate\s*limit/i,
+  /quota/i,
+  /usage\s*limit/i,
+  /resource[_\s-]*exhausted/i,
+  /overloaded/i,
+  /heavy\s*demand/i,
+  /service\s*unavailable/i,
+  /currently\s*unavailable/i,
+  /temporarily\s*unavailable/i
+];
+
+function isRetriableApiError(status, bodyText) {
+  if (API_RETRY_STATUS_CODES.has(status)) return true;
+  if (bodyText) {
+    for (const re of API_RETRY_BODY_PATTERNS) {
+      if (re.test(bodyText)) return true;
+    }
+  }
+  return false;
+}
+
+async function callOpenAIImage(modelKey, tpl, vars, subject, selectedRatio, quality, onRateLimited) {
   const modelId = MODEL_MAP[modelKey];
   const apiRatio = OPENAI_RATIO_TO_SIZE[selectedRatio] ? selectedRatio : "3:2";
   const size = OPENAI_RATIO_TO_SIZE[apiRatio];
@@ -1408,12 +1523,18 @@ async function callOpenAIImage(modelKey, tpl, vars, subject, selectedRatio, qual
     }
     clearTimeout(timeoutId);
 
-    if (resp.status === 429 && attempt < OPENAI_RATELIMIT_MAX_RETRIES) {
+    if (!resp.ok && attempt < API_RETRY_MAX_ATTEMPTS) {
       lastErrText = await resp.text().catch(() => "");
-      attempt += 1;
-      console.warn(`[OpenAI 429] rate-limited, retrying in ${OPENAI_RATELIMIT_RETRY_MS / 1000}s (attempt ${attempt}/${OPENAI_RATELIMIT_MAX_RETRIES}) — ${lastErrText.slice(0, 200)}`);
-      await new Promise(r => setTimeout(r, OPENAI_RATELIMIT_RETRY_MS));
-      continue;
+      if (isRetriableApiError(resp.status, lastErrText)) {
+        attempt += 1;
+        const waitMs = API_RETRY_WAIT_MS;
+        console.warn(`[OpenAI ${resp.status}] retriable error, retrying in ${waitMs / 1000}s (attempt ${attempt}/${API_RETRY_MAX_ATTEMPTS}) — ${lastErrText.slice(0, 200)}`);
+        if (typeof onRateLimited === "function") {
+          try { onRateLimited({ attempt, max: API_RETRY_MAX_ATTEMPTS, waitMs }); } catch (_) {}
+        }
+        await new Promise(r => setTimeout(r, waitMs));
+        continue;
+      }
     }
     break;
   }
@@ -1457,17 +1578,262 @@ async function callOpenAIImage(modelKey, tpl, vars, subject, selectedRatio, qual
   throw new Error("No image in response");
 }
 
+/* ===========================================================
+   Ideogram v3 prompt construction
+
+   Ideogram is NOT a reasoning model like Gemini or gpt-image-2. It's a
+   descriptive image generator — you tell it what the final picture should
+   LOOK like in plain natural language and it draws that. Handing it the
+   full 15KB structured JSON prompt (which was written for models that plan
+   before drawing) makes Ideogram focus on the last thing it sees — the
+   subject — and skip the layout entirely, producing a single centered
+   image instead of a step-by-step worksheet.
+
+   This builder produces a compact, layout-first, natural-language prompt
+   tuned for Ideogram's DESIGN style. It leads with the multi-panel
+   composition, then describes the progression, the color rule (single-black
+   vs. gray-previous/black-new), and the visual style.
+
+   Color-scheme detection: rather than duplicating each prompt template, we
+   read the `vars` object populated by buildVars(). If STROKE_COLOR_PREVIOUS
+   is defined, we're on a gray-previous template (V9); otherwise we're on a
+   single-color-black template (V8 / V8-graysteps use different vars, but
+   V8-graysteps also sets STROKE_COLOR_PREVIOUS so it flows through here).
+   =========================================================== */
+
+// Compact negative prompt for Ideogram. The full template negative_prompt
+// (thousands of chars) overwhelms Ideogram and doesn't help. This list
+// focuses on failure modes Ideogram is actually prone to.
+const IDEOGRAM_NEGATIVE_PROMPT = [
+  "text", "letters", "numbers", "digits", "labels", "captions",
+  "watermarks", "logos", "signatures",
+  "panels", "borders", "boxes", "frames", "grid lines", "dividers",
+  "single centered image", "only one drawing", "no stages", "missing progression",
+  "background scene", "decorative background", "environment",
+  "shading", "color fill", "gradients", "gray fill inside shapes",
+  "cluttered composition", "extra characters", "duplicate subject",
+  "tapered strokes", "calligraphy", "sketch lines", "painterly style",
+  "photorealism", "complex anatomy", "excessive detail",
+  "cream background", "off-white background", "paper texture"
+].join(", ");
+
+function buildIdeogramPrompt(tpl, vars, subject) {
+  const steps = parseInt(vars.DRAWING_STEPS_NUMBER, 10) || 4;
+  const style = vars.DRAWING_STYLE || "Kawaii Cartoon";
+  const lineStyle = vars.LINE_STYLE || "Clean Rounded Coloring-Book Outline";
+  const age = vars.TARGET_AGE_RANGE || "5 to 8 years old";
+  const arrowsCount = Math.max(0, steps - 1);
+
+  // Detect the gray-previous / black-new scheme from the vars populated by
+  // buildVars(). Both V9-grayblack and V8-graysteps set STROKE_COLOR_PREVIOUS.
+  const isGrayBlack = typeof vars.STROKE_COLOR_PREVIOUS === "string";
+
+  // Layout description — the single most important part for Ideogram.
+  let layoutDesc;
+  if (steps === 4) {
+    layoutDesc =
+      "LAYOUT: The single white page is divided into FOUR distinct drawing areas arranged in an N-shape staggered grid — " +
+      "stage 1 in the UPPER-LEFT quadrant, stage 2 in the LOWER-LEFT quadrant (offset slightly to the right of stage 1), " +
+      "stage 3 in the UPPER-RIGHT quadrant, and stage 4 in the LOWER-RIGHT quadrant (offset slightly to the right of stage 3). " +
+      "The reading flow traces an N shape: stage 1 → stage 2 → stage 3 → stage 4.";
+  } else if (steps === 3) {
+    layoutDesc =
+      "LAYOUT: The single white page contains THREE distinct drawing areas arranged left-to-right in a staggered pattern " +
+      "so the reading flow goes stage 1 → stage 2 → stage 3.";
+  } else if (steps === 2) {
+    layoutDesc =
+      "LAYOUT: The single white page contains TWO distinct drawing areas side by side, stage 1 on the left and stage 2 on the right.";
+  } else {
+    layoutDesc =
+      `LAYOUT: The single white page contains ${steps} distinct drawing areas arranged in a staggered N-shape reading flow ` +
+      "distributed evenly across the page (top-left, then bottom-left, then top-right, then bottom-right, and so on).";
+  }
+
+  // Color rule — the second most important part.
+  let colorDesc;
+  if (isGrayBlack) {
+    colorDesc =
+      "COLOR RULE: Stage 1 is drawn entirely in PURE BLACK (#000000) on white. " +
+      "In every stage after stage 1, all lines that were drawn in earlier stages appear in LIGHT GRAY (#C6C6C5), " +
+      "and ONLY the newly-added lines of the current stage are in PURE BLACK (#000000). " +
+      "This gray-then-black scheme visually separates 'what was already drawn' (gray, faded) from 'what to draw next' (black, sharp), " +
+      "helping the child know exactly what pencil strokes to add at each stage. Every previous line stays EXACTLY where it was " +
+      "and simply changes color from black to gray in the next stage — never repositioned, resized, or reshaped.";
+  } else {
+    colorDesc =
+      "COLOR RULE: Every character line in every stage is drawn in PURE BLACK (#000000) on a pure white background. " +
+      "Each stage is a copy of the previous stage plus new black lines added on top — every earlier line stays in EXACTLY " +
+      "the same position, size, orientation, and thickness in every later stage. Nothing is ever moved, resized, or redrawn.";
+  }
+
+  // If the subject already opens with a cute/kawaii adjective, don't inject
+  // another "cute" and produce phrasing like "a cute Cute Lion".
+  const subjectAlreadyDescriptive = /^\s*(cute|kawaii|adorable|cool|little|baby|tiny|happy|smiling|friendly)\b/i.test(subject);
+  const subjectPhrase = subjectAlreadyDescriptive ? subject : `cute ${subject}`;
+
+  return (
+    `A high-quality educational children's how-to-draw tutorial worksheet page, in the style of a professional kids' ` +
+    `activity book, showing exactly ${steps} progressive drawing STAGES of a ${subjectPhrase}, all on ONE single clean white page. ` +
+    `This is a step-by-step tutorial layout — NOT a single centered drawing.\n\n` +
+    layoutDesc + `\n\n` +
+    `STAGE-BY-STAGE PROGRESSION: In every stage the ${subject} appears at the exact same size, same position within its area, ` +
+    `same facing direction, and same pose. Each stage is a copy of the previous stage plus a few new strokes added on top — ` +
+    `nothing from earlier stages is ever moved, resized, mirrored, restyled, or redrawn.\n` +
+    `- Stage 1: only the SIMPLEST starting shape (usually the largest body oval or head circle) as a clean closed outline. No details, no features.\n` +
+    `- Middle stages: add the major structural contours (limbs, ears, wings, tail) and identity markers (hair, mane, fur tufts, spots, feathers, accessories).\n` +
+    `- Final stage: completes the drawing by adding facial features (eyes, nose, mouth, whiskers, smile) — but ONLY if the ${subject} is an animal or a human. ` +
+    `If the ${subject} is a vehicle, toy, object, plant, food, building, robot, or anything that is not an animal or human, then NO facial features are drawn at all; the final stage adds only small finishing details.\n\n` +
+    colorDesc + `\n\n` +
+    `ARROWS: Draw exactly ${arrowsCount} small soft-gray (#999999) dotted curved arrows between consecutive stages, each with a single small arrowhead ` +
+    `at the destination end, showing the reading flow. Arrows sit in the empty space between stages, never crossing any drawing.\n\n` +
+    `VISUAL STYLE:\n` +
+    `- Drawing style: ${style}, interpreted in a clean beginner-friendly children's coloring-book workbook style, appropriate for ${age}.\n` +
+    `- Line style: ${lineStyle}. Uniform stroke thickness throughout. No tapering, no calligraphy, no shading, no color fill, no gradients, no textures.\n` +
+    `- Background: fully pure white (#FFFFFF), completely uniform, no textures, no paper grain.\n` +
+    `- NO visible panels, borders, boxes, dividers, or grid lines between or around the stages.\n` +
+    `- Absolutely NO text, NO numbers, NO letters, NO labels, NO watermarks anywhere on the page.`
+  );
+}
+
+/* ===========================================================
+   Ideogram v3 API call
+
+   Endpoint: POST https://api.ideogram.ai/v1/ideogram-v3/generate
+   Auth:     Api-Key: <IDEOGRAM_API_KEY>
+   Body:     multipart/form-data (NOT JSON — the v3 endpoint requires FormData
+             so it can also carry optional reference images we don't use here).
+
+   Both fetches (the /generate call AND the follow-up CDN image fetch) are
+   routed through the local CORS proxy so the browser accepts the responses.
+   If the proxy isn't running we rewrite the browser's cryptic "Failed to
+   fetch" TypeError into a clear "start the proxy" message.
+
+   Ideogram takes a single natural-language prompt (same shape as OpenAI), so
+   we reuse buildOpenAIPrompt to produce the flattened, size-capped text.
+
+   Returns { dataUrl, base64, mime, ideogramResolution, ideogramSpeed } so
+   the caller can record the exact per-image cost.
+   =========================================================== */
+async function callIdeogramImage(modelKey, tpl, vars, subject, selectedRatio, quality, onRateLimited) {
+  const modelId = MODEL_MAP[modelKey];
+  const apiRatio = IDEOGRAM_RATIO_TO_API[selectedRatio] || IDEOGRAM_RATIO_TO_API["3:2"];
+  const renderingSpeed = ["TURBO", "DEFAULT", "QUALITY"].includes(quality) ? quality : "DEFAULT";
+  // NOTE: Ideogram is a descriptive image generator, so we do NOT reuse
+  // buildOpenAIPrompt here. Instead we build a compact, layout-first
+  // natural-language prompt tailored to Ideogram's DESIGN style. See
+  // buildIdeogramPrompt above for the reasoning.
+  const fullPrompt = buildIdeogramPrompt(tpl, vars, subject);
+  console.log("[Ideogram request]", { model: modelId, aspect_ratio: apiRatio, rendering_speed: renderingSpeed, promptLength: fullPrompt.length });
+  console.log("[Ideogram prompt]", fullPrompt);
+  if (!IDEOGRAM_API_KEY || IDEOGRAM_API_KEY.length < 10) {
+    throw new Error("IDEOGRAM_API_KEY is not set in the source.");
+  }
+
+  // Ideogram v3 requires multipart/form-data. Building a FormData object
+  // lets the browser set the multipart boundary automatically.
+  function buildForm() {
+    const form = new FormData();
+    form.append("prompt", fullPrompt);
+    form.append("aspect_ratio", apiRatio);
+    form.append("rendering_speed", renderingSpeed);
+    form.append("magic_prompt", "OFF");   // don't let Ideogram rewrite the layout-first prompt
+    form.append("style_type", "DESIGN");  // best for multi-panel educational infographic layouts
+    form.append("num_images", "1");
+    if (IDEOGRAM_NEGATIVE_PROMPT) form.append("negative_prompt", IDEOGRAM_NEGATIVE_PROMPT);
+    return form;
+  }
+
+  let resp;
+  let lastErrText = "";
+  let attempt = 0;
+  while (true) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 180000);
+    try {
+      resp = await fetch(IDEOGRAM_API_BASE, {
+        method: "POST",
+        headers: { "Api-Key": IDEOGRAM_API_KEY },
+        body: buildForm(),
+        signal: controller.signal,
+        cache: "no-store",
+        keepalive: false
+      });
+    } catch (e) {
+      clearTimeout(timeoutId);
+      if (e.name === "AbortError") throw new Error("Request timed out after 180s");
+      // Most common cause: the local CORS proxy isn't running. Rewrite the
+      // browser's cryptic "TypeError: Failed to fetch" into a clear message.
+      if (String(e.message || "").toLowerCase().includes("failed to fetch")) {
+        throw new Error(
+          "Cannot reach the CORS proxy at " + IDEOGRAM_PROXY_BASE +
+          '. Start it by running "python3 cors-proxy.py" from the Website_drawing folder, then try again.'
+        );
+      }
+      throw e;
+    }
+    clearTimeout(timeoutId);
+
+    if (!resp.ok && attempt < API_RETRY_MAX_ATTEMPTS) {
+      lastErrText = await resp.text().catch(() => "");
+      if (isRetriableApiError(resp.status, lastErrText)) {
+        attempt += 1;
+        const waitMs = API_RETRY_WAIT_MS;
+        console.warn(`[Ideogram ${resp.status}] retriable error, retrying in ${waitMs / 1000}s (attempt ${attempt}/${API_RETRY_MAX_ATTEMPTS}) — ${lastErrText.slice(0, 200)}`);
+        if (typeof onRateLimited === "function") {
+          try { onRateLimited({ attempt, max: API_RETRY_MAX_ATTEMPTS, waitMs }); } catch (_) {}
+        }
+        await new Promise(r => setTimeout(r, waitMs));
+        continue;
+      }
+    }
+    break;
+  }
+
+  if (!resp.ok) {
+    const txt = lastErrText || (await resp.text().catch(() => ""));
+    throw new Error(`HTTP ${resp.status}: ${txt.slice(0, 300)}`);
+  }
+  const data = await resp.json();
+  const item = data?.data?.[0];
+  if (!item?.url) throw new Error("No image URL in Ideogram response");
+
+  // Fetch the signed CDN URL through the same proxy so its response also
+  // arrives with the CORS header. Inline as a data URL so the rest of the
+  // pipeline (preview, ZIP download, regenerate, dimensions badge) works
+  // exactly like the Gemini and OpenAI paths.
+  const proxiedImgUrl = `${IDEOGRAM_PROXY_BASE}/proxy?url=${encodeURIComponent(item.url)}`;
+  const imgResp = await fetch(proxiedImgUrl, { cache: "no-store" });
+  if (!imgResp.ok) throw new Error(`Failed to fetch image URL: HTTP ${imgResp.status}`);
+  const blob = await imgResp.blob();
+  const buf = await blob.arrayBuffer();
+  const bytes = new Uint8Array(buf);
+  let bin = "";
+  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+  const b64 = btoa(bin);
+  const mime = blob.type || "image/png";
+  return {
+    dataUrl: `data:${mime};base64,${b64}`,
+    base64: b64,
+    mime: mime,
+    ideogramResolution: item.resolution,
+    ideogramSpeed: renderingSpeed
+  };
+}
+
 /* Dispatcher: pick the right backend based on the model key.
    The Gemini path keeps its static + dynamic split (preserves implicit
-   prompt-cache benefits across batches of subjects). The OpenAI path
-   builds its own subject-led prompt from the template + vars. */
-async function callImageModel(modelKey, tpl, vars, subject, selectedRatio, quality) {
+   prompt-cache benefits across batches of subjects). The OpenAI and
+   Ideogram paths build their own subject-led prompt from the template. */
+async function callImageModel(modelKey, tpl, vars, subject, selectedRatio, quality, onRateLimited) {
   if (modelKey === "openai_image_2") {
-    return await callOpenAIImage(modelKey, tpl, vars, subject, selectedRatio, quality);
+    return await callOpenAIImage(modelKey, tpl, vars, subject, selectedRatio, quality, onRateLimited);
+  }
+  if (modelKey === "ideogram_v3") {
+    return await callIdeogramImage(modelKey, tpl, vars, subject, selectedRatio, quality, onRateLimited);
   }
   const staticText = flattenPromptStatic(tpl, vars);
   const dynamicText = buildSubjectSuffix(subject);
-  return await callGeminiImage(modelKey, staticText, dynamicText, selectedRatio, quality);
+  return await callGeminiImage(modelKey, staticText, dynamicText, selectedRatio, quality, onRateLimited);
 }
 
 /* ===========================================================
@@ -1609,6 +1975,9 @@ function recordImageCost(modelKey, quality, openaiSize) {
     if (!table) return null;
     // Fall back to the 1024x1024 row if size is missing for any reason.
     price = table[openaiSize] !== undefined ? table[openaiSize] : table["1024x1024"];
+  } else if (modelKey === "ideogram_v3") {
+    const q = ["TURBO", "DEFAULT", "QUALITY"].includes(quality) ? quality : "DEFAULT";
+    price = IDEOGRAM_PRICING[q];
   } else {
     const tier = PRICING[modelKey];
     if (!tier) return null;
@@ -1629,7 +1998,7 @@ function updateCostCounter() {
   el.textContent = `$${state.totalCost.toFixed(4)}`;
   const counter = document.getElementById("costCounter");
   if (counter) {
-    counter.title = `Estimated cost since last reset across ${state.imageCount} image(s). Approximate, based on published per-image rates: Google — Pro 1K/2K $0.134, Pro 4K $0.24, Flash 1K $0.067, Flash 2K $0.101, Flash 4K $0.151. OpenAI gpt-image-2 — low ~$0.005, medium ~$0.041, high ~$0.165 (3:2 / 2:3); square (1:1) is slightly higher.`;
+    counter.title = `Estimated cost since last reset across ${state.imageCount} image(s). Approximate, based on published per-image rates: Google — Pro 1K/2K $0.134, Pro 4K $0.24, Flash 1K $0.067, Flash 2K $0.101, Flash 4K $0.151. OpenAI gpt-image-2 — low ~$0.005, medium ~$0.041, high ~$0.165 (3:2 / 2:3); square (1:1) is slightly higher. Ideogram V3 — Turbo $0.03, Default $0.06, Quality $0.09.`;
   }
 }
 
@@ -1664,6 +2033,13 @@ function renderGrid() {
     thumb.className = "thumb";
     if (item.status === "pending") {
       thumb.classList.add("pending");
+      if (item.retryInfo) {
+        const info = document.createElement("div");
+        info.className = "retry-info";
+        const r = item.retryInfo;
+        info.textContent = `API busy — retrying in ${r.waitSec}s (attempt ${r.attempt}/${r.max})`;
+        thumb.appendChild(info);
+      }
     } else if (item.status === "error") {
       thumb.classList.add("error");
       thumb.textContent = "Failed: " + (item.error || "unknown error");
@@ -1787,10 +2163,11 @@ async function runBatch() {
 
 async function generateOne(idx, cfg) {
   const item = state.items[idx];
+  const onRateLimited = makeRateLimitHandler(item);
   try {
     const tpl = promptForChoice(cfg.prompt);
     const vars = buildVars(item.subject, cfg);
-    const res = await callImageModel(cfg.model, tpl, vars, item.subject, cfg.aspect, cfg.quality);
+    const res = await callImageModel(cfg.model, tpl, vars, item.subject, cfg.aspect, cfg.quality, onRateLimited);
     item.status = "done";
     item.dataUrl = res.dataUrl;
     item.base64 = res.base64;
@@ -1801,9 +2178,33 @@ async function generateOne(idx, cfg) {
     item.status = "error";
     item.error = e.message || String(e);
   }
+  item.retryInfo = null;
   renderGrid();
   updateErrorBanner();
   updateDownloadAllBtn();
+}
+
+// Build a callback that surfaces 429 retry state into the per-subject box.
+// While the retry timer is counting down the box shows a small badge and
+// a per-second tick so the user sees that the request is automatically
+// being re-sent rather than stuck.
+function makeRateLimitHandler(item) {
+  return function ({ attempt, max, waitMs }) {
+    if (item.retryTimer) clearInterval(item.retryTimer);
+    let remaining = Math.ceil(waitMs / 1000);
+    item.retryInfo = { attempt, max, waitSec: remaining };
+    renderGrid();
+    item.retryTimer = setInterval(() => {
+      remaining -= 1;
+      if (remaining <= 0) {
+        clearInterval(item.retryTimer);
+        item.retryTimer = null;
+        return;
+      }
+      item.retryInfo = { attempt, max, waitSec: remaining };
+      renderGrid();
+    }, 1000);
+  };
 }
 
 async function regenerate(idx) {
@@ -1815,10 +2216,11 @@ async function regenerate(idx) {
   item.downloaded = false;
   item.regenerated = false;
   renderGrid();
+  const onRateLimited = makeRateLimitHandler(item);
   try {
     const tpl = promptForChoice(cfg.prompt);
     const vars = buildVars(item.subject, cfg);
-    const res = await callImageModel(cfg.model, tpl, vars, item.subject, cfg.aspect, cfg.quality);
+    const res = await callImageModel(cfg.model, tpl, vars, item.subject, cfg.aspect, cfg.quality, onRateLimited);
     item.status = "done";
     item.dataUrl = res.dataUrl;
     item.base64 = res.base64;
@@ -1831,6 +2233,7 @@ async function regenerate(idx) {
     item.error = e.message || String(e);
   }
   item.loading = false;
+  item.retryInfo = null;
   renderGrid();
   updateErrorBanner();
   updateDownloadAllBtn();
@@ -1915,12 +2318,13 @@ function populateAspectDropdown(preserveValue) {
   const prev = preserveValue !== undefined ? preserveValue : sel.value;
   sel.innerHTML = "";
 
-  // OpenAI gpt-image-2 only supports a fixed set of sizes; the custom 333:215
-  // ratio doesn't apply, so default to 3:2 (1536x1024) instead.
-  const isOpenAI = modelKey === "openai_image_2";
-  const fallbackDefault = isOpenAI ? "3:2" : CUSTOM_RATIO_DEFAULT;
+  // OpenAI gpt-image-2 and Ideogram v3 both use a fixed enum of aspect
+  // ratios and do NOT support the custom 333:215 ratio, so for these
+  // backends we default to 3:2 instead.
+  const isFixedRatio = modelKey === "openai_image_2" || modelKey === "ideogram_v3";
+  const fallbackDefault = isFixedRatio ? "3:2" : CUSTOM_RATIO_DEFAULT;
 
-  if (!isOpenAI) {
+  if (!isFixedRatio) {
     const optDefault = document.createElement("option");
     optDefault.value = CUSTOM_RATIO_DEFAULT;
     optDefault.textContent = `${CUSTOM_RATIO_DEFAULT} (default)`;
@@ -1930,7 +2334,7 @@ function populateAspectDropdown(preserveValue) {
   for (const r of supported) {
     const o = document.createElement("option");
     o.value = r;
-    o.textContent = isOpenAI && r === "3:2" ? `${r} (default)` : r;
+    o.textContent = isFixedRatio && r === "3:2" ? `${r} (default)` : r;
     sel.appendChild(o);
   }
 
@@ -1938,6 +2342,46 @@ function populateAspectDropdown(preserveValue) {
     sel.value = prev;
   } else {
     sel.value = fallbackDefault;
+  }
+}
+
+/* ===========================================================
+   Quality dropdown population (model-aware)
+
+   Gemini + OpenAI use the resolution-tier trio (1K / 2K / 4K), while
+   Ideogram v3 exposes rendering-speed tiers (Turbo / Default / Quality)
+   that also correspond to price. When the model changes we rebuild the
+   dropdown so the values shown always match what the backend accepts.
+   =========================================================== */
+function populateQualityDropdown(preserveValue) {
+  const sel = document.getElementById("quality");
+  const modelKey = document.getElementById("model").value;
+  const prev = preserveValue !== undefined ? preserveValue : sel.value;
+  sel.innerHTML = "";
+
+  let options, defaultValue;
+  if (modelKey === "ideogram_v3") {
+    options = IDEOGRAM_QUALITY_OPTIONS;
+    defaultValue = "DEFAULT";
+  } else {
+    options = [
+      { value: "1K", label: "1K" },
+      { value: "2K", label: "2K" },
+      { value: "4K", label: "4K" }
+    ];
+    defaultValue = "2K";
+  }
+
+  for (const opt of options) {
+    const o = document.createElement("option");
+    o.value = opt.value;
+    o.textContent = opt.label;
+    sel.appendChild(o);
+  }
+  if (prev && Array.from(sel.options).some(o => o.value === prev)) {
+    sel.value = prev;
+  } else {
+    sel.value = defaultValue;
   }
 }
 
@@ -1978,6 +2422,7 @@ function applyConfigValues(v, name) {
   if (v.subjects !== undefined) document.getElementById("subjects").value = v.subjects;
   if (v.model !== undefined) document.getElementById("model").value = v.model;
   populateAspectDropdown(v.aspect);
+  populateQualityDropdown(v.quality);
   if (v.steps !== undefined) document.getElementById("steps").value = v.steps;
   if (v.age !== undefined) document.getElementById("age").value = v.age;
   if (v.pathWidth !== undefined) document.getElementById("pathWidth").value = v.pathWidth;
@@ -2299,7 +2744,10 @@ window.addEventListener("storage", (e) => {
 document.getElementById("subjects").addEventListener("input", refreshStartBtn);
 document.getElementById("previewModal").addEventListener("click", closePreview);
 
-document.getElementById("model").addEventListener("change", () => populateAspectDropdown());
+document.getElementById("model").addEventListener("change", () => {
+  populateAspectDropdown();
+  populateQualityDropdown();
+});
 
 document.getElementById("saveConfigBtn").addEventListener("click", openSaveModal);
 document.getElementById("saveCancelBtn").addEventListener("click", closeSaveModal);
@@ -2334,6 +2782,7 @@ document.addEventListener("click", (e) => {
 });
 
 populateAspectDropdown(CUSTOM_RATIO_DEFAULT);
+populateQualityDropdown();
 renderConfigsMenu();
 refreshStartBtn();
 refreshSaveConfigStatus();
