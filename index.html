@@ -25,6 +25,198 @@
     justify-content: space-between;
     position: relative;
   }
+  header .header-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  /* ---------- Hamburger + side menu ---------- */
+  .menu-toggle {
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 5px;
+    transition: background 0.15s;
+    flex-shrink: 0;
+  }
+  .menu-toggle:hover { background: rgba(255,255,255,0.12); }
+  .side-menu {
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    width: 210px;
+    background: #0b0f16;
+    color: #fff;
+    z-index: 1200;
+    transform: translateX(-100%);
+    transition: transform 0.22s ease;
+    display: flex;
+    flex-direction: column;
+    padding: 22px 16px 18px;
+    box-shadow: 4px 0 22px rgba(0,0,0,0.35);
+  }
+  .side-menu.open { transform: translateX(0); }
+  .side-menu .menu-title {
+    font-size: 30px;
+    font-weight: 700;
+    color: #4b5563;
+    letter-spacing: 1px;
+    margin: 0 0 26px 6px;
+    user-select: none;
+  }
+  .side-menu .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 10px 14px;
+    margin-bottom: 10px;
+    border: none;
+    border-radius: 22px;
+    background: #1f2937;
+    color: #e5e7eb;
+    font-size: 14px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    text-align: left;
+    transition: filter 0.15s, background 0.15s;
+  }
+  .side-menu .nav-item:hover { filter: brightness(1.18); }
+  .side-menu .nav-ico { font-size: 15px; line-height: 1; flex-shrink: 0; }
+  .side-menu .nav-item.active-draw { background: #7c3aed; color: #fff; }
+  .side-menu .nav-item.active-imagegen { background: #3b82f6; color: #fff; }
+  .side-menu .nav-spacer { flex: 1; }
+  .side-menu .nav-item.settings-item { background: #111827; border: 1px solid #374151; border-radius: 8px; }
+  .menu-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    z-index: 1150;
+    display: none;
+  }
+  .menu-backdrop.visible { display: block; }
+
+  /* ---------- Settings modal ---------- */
+  .settings-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.55);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1300;
+    padding: 20px;
+  }
+  .settings-modal.visible { display: flex; }
+  .settings-box {
+    background: #4a4a4a;
+    color: #fff;
+    border-radius: 14px;
+    padding: 22px 34px 26px;
+    width: 100%;
+    max-width: 820px;
+    max-height: 90vh;
+    overflow-y: auto;
+    position: relative;
+    box-shadow: 0 18px 60px rgba(0,0,0,0.45);
+  }
+  .settings-box .settings-close {
+    position: absolute;
+    top: 18px; left: 18px;
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    background: #fff;
+    color: #111827;
+    border: none;
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    font-weight: 600;
+  }
+  .settings-box .settings-close:hover { background: #e5e7eb; }
+  .settings-box h2 {
+    text-align: center;
+    font-size: 38px;
+    font-weight: 400;
+    margin: 4px 0 30px;
+    letter-spacing: 0.5px;
+  }
+  .settings-field { margin-bottom: 22px; }
+  .settings-field label {
+    display: block;
+    font-size: 19px;
+    font-weight: 600;
+    margin-bottom: 9px;
+  }
+  .settings-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .settings-row input {
+    flex: 1;
+    min-width: 0;
+    padding: 11px 14px;
+    border: none;
+    border-radius: 7px;
+    font-size: 14px;
+    font-family: inherit;
+    background: #fff;
+    color: #111827;
+    letter-spacing: 0.4px;
+  }
+  .settings-row input:disabled {
+    background: #fff;
+    color: #4b5563;
+    cursor: default;
+  }
+  .settings-row input:focus { outline: 2px solid #2563eb; }
+  .settings-row .key-edit-btn {
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 17px;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 4px 6px;
+    min-width: 46px;
+    font-family: inherit;
+  }
+  .settings-row .key-edit-btn:hover { text-decoration: underline; }
+  .settings-row .key-edit-btn.hidden { visibility: hidden; }
+  .settings-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 30px;
+  }
+  .settings-actions button {
+    padding: 9px 30px;
+    border-radius: 7px;
+    border: none;
+    background: #111827;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 500;
+    font-family: inherit;
+    cursor: pointer;
+  }
+  .settings-actions button:hover { background: #1f2937; }
+  .settings-hint {
+    font-size: 12px;
+    color: #d1d5db;
+    margin-top: 6px;
+    line-height: 1.5;
+  }
+
+  /* ---------- Page routing ---------- */
+  .page { display: none; }
+  .page.active { display: block; }
   .version-tag {
     display: inline-block;
     margin-left: 10px;
@@ -472,12 +664,187 @@
     .field.wide { grid-column: span 1; }
     .results-grid { grid-template-columns: 1fr; }
   }
+
+  /* ===========================================================
+     Image Generator page
+     =========================================================== */
+  .ig-panel {
+    background: #dfe6ec;
+    border-radius: 22px;
+    padding: 22px 26px 26px;
+    margin-bottom: 18px;
+  }
+  .ig-panel h2 {
+    text-align: center;
+    font-size: 26px;
+    font-weight: 400;
+    margin: 4px 0 16px;
+    color: #1f2937;
+  }
+  #igPrompt {
+    width: 100%;
+    min-height: 230px;
+    resize: vertical;
+    padding: 16px 18px;
+    border: 2px solid #111827;
+    border-radius: 14px;
+    font-size: 15px;
+    font-family: inherit;
+    line-height: 1.5;
+    background: #fff;
+    color: #1f2937;
+  }
+  #igPrompt:focus { outline: none; border-color: #2563eb; }
+  #igPrompt::placeholder { color: #9ca3af; }
+
+  /* image strips under the prompt */
+  .ig-strip-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    margin-top: 12px;
+  }
+  .ig-strip-side { display: flex; align-items: flex-start; gap: 8px; min-width: 0; }
+  .ig-strip-side.edit-side { flex: 1; min-width: 0; }
+  .ig-add-btn {
+    width: 34px; height: 34px;
+    flex-shrink: 0;
+    border: none;
+    border-radius: 7px;
+    color: #fff;
+    font-size: 21px;
+    line-height: 1;
+    font-weight: 400;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: inherit;
+  }
+  .ig-add-btn.blue { background: #2563eb; }
+  .ig-add-btn.orange { background: #f97316; }
+  .ig-add-btn:disabled { background: #9ca3af; cursor: not-allowed; opacity: 0.65; }
+  .ig-thumbs {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 2px 2px 6px;
+    min-height: 42px;
+    flex: 1;
+    min-width: 0;
+    scrollbar-width: thin;
+  }
+  .ig-thumbs::-webkit-scrollbar { height: 7px; }
+  .ig-thumbs::-webkit-scrollbar-thumb { background: #9ca3af; border-radius: 4px; }
+  .ig-thumb {
+    position: relative;
+    width: 42px; height: 42px;
+    flex-shrink: 0;
+    border-radius: 7px;
+    overflow: hidden;
+    border: 1px solid #9ca3af;
+    background: #fff;
+  }
+  .ig-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .ig-thumb .ig-thumb-x {
+    position: absolute;
+    top: -5px; left: -5px;
+    width: 17px; height: 17px;
+    border-radius: 4px;
+    background: #111827;
+    color: #fff;
+    border: none;
+    font-size: 11px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    font-family: inherit;
+  }
+  .ig-thumb .ig-thumb-x:hover { background: #b91c1c; }
+  .ig-count-hint {
+    font-size: 11px;
+    color: #4b5563;
+    align-self: center;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .ig-fields {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 18px;
+    margin-top: 22px;
+  }
+  .ig-fields .field label { font-size: 15px; font-weight: 500; color: #1f2937; }
+  .ig-fields .field select {
+    padding: 10px 12px;
+    border-radius: 7px;
+    border: 1px solid #9ca3af;
+    background: #fff;
+    font-size: 14px;
+  }
+
+  /* Image Generator results: 30% taller thumbs + carousel */
+  #igResultsGrid .card .thumb { aspect-ratio: 3 / 2.6; }
+  .ig-dots {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 0 2px;
+    min-height: 18px;
+  }
+  .ig-dots .ig-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: #d1d5db;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.15s;
+  }
+  .ig-dots .ig-dot.active { background: #4b5563; transform: scale(1.25); }
+  .card .thumb .var-badge {
+    position: absolute;
+    bottom: 6px; right: 6px;
+    background: rgba(17,24,39,0.78);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 4px;
+    pointer-events: none;
+  }
+  .card .thumb.swipeable img { cursor: grab; }
+
+  @media (max-width: 900px) {
+    .ig-fields { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 560px) {
+    .ig-fields { grid-template-columns: 1fr; }
+  }
 </style>
 </head>
 <body>
 
+<div id="menuBackdrop" class="menu-backdrop"></div>
+<nav id="sideMenu" class="side-menu">
+  <div class="menu-title">MENU</div>
+  <button type="button" class="nav-item active-draw" data-page="draw"><span class="nav-ico">✏️</span>How to Draw</button>
+  <button type="button" class="nav-item" data-page="imagegen"><span class="nav-ico">🖼️</span>Image Gen</button>
+  <div class="nav-spacer"></div>
+  <button type="button" class="nav-item settings-item" id="openSettingsBtn"><span class="nav-ico">⚙️</span>Settings</button>
+</nav>
+
 <header>
-  <span>How To Draw — Bulk Worksheet Generator <span class="version-tag">V3</span></span>
+  <div class="header-left">
+    <button type="button" id="menuToggle" class="menu-toggle" title="Toggle menu">☰</button>
+    <span id="headerTitle">How To Draw — Bulk Worksheet Generator <span class="version-tag">V3</span></span>
+  </div>
   <div id="configsWrap" class="configs-wrap">
     <button id="configsBtn" class="configs-btn" type="button">Configs ▾</button>
     <div id="configsMenu" class="configs-menu"></div>
@@ -485,6 +852,7 @@
 </header>
 
 <main>
+<div id="page-draw" class="page active">
   <div class="section">
     <h2>Data</h2>
     <div class="grid-fields">
@@ -607,7 +975,128 @@
       <div class="empty-state">No generations yet. Enter subjects and press START.</div>
     </div>
   </div>
+</div><!-- /page-draw -->
+
+<div id="page-imagegen" class="page">
+  <div class="section">
+    <div class="ig-panel">
+      <h2>Prompt</h2>
+      <textarea id="igPrompt" placeholder="Like: cute lion, angry dog, small table"></textarea>
+
+      <div class="ig-strip-row">
+        <div class="ig-strip-side edit-side">
+          <button type="button" id="igAddEditBtn" class="ig-add-btn blue" title="Add images to edit (Edit mode only, up to 20)">+</button>
+          <div id="igEditThumbs" class="ig-thumbs"></div>
+          <span id="igEditCount" class="ig-count-hint"></span>
+        </div>
+        <div class="ig-strip-side">
+          <div id="igRefThumbs" class="ig-thumbs" style="flex:0 0 auto;"></div>
+          <button type="button" id="igAddRefBtn" class="ig-add-btn orange" title="Add one reference image">+</button>
+        </div>
+      </div>
+
+      <input type="file" id="igEditFileInput" accept="image/*" multiple hidden />
+      <input type="file" id="igRefFileInput" accept="image/*" hidden />
+
+      <div class="ig-fields">
+        <div class="field">
+          <label for="igModel">Drawing Model:</label>
+          <select id="igModel">
+            <option value="pro" selected>Nano Banana Pro</option>
+            <option value="v2">Nano Banana 2</option>
+            <option value="openai_image_2">ChatGPT Image 2.0</option>
+            <option value="ideogram_v3">Ideogram V3 (needs local proxy)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="igQuality">Quality:</label>
+          <select id="igQuality"></select>
+        </div>
+        <div class="field">
+          <label for="igVariations">Generation per image:</label>
+          <select id="igVariations">
+            <option value="1" selected>1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="igMode">Generation Mode:</label>
+          <select id="igMode">
+            <option value="new" selected>New</option>
+            <option value="edit">Edit</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button id="igStartBtn" class="primary" disabled>START</button>
+      <button id="igResetBtn">Reset</button>
+      <button id="igDownloadAllBtn" disabled>Download All (ZIP)</button>
+      <button id="igSaveConfigBtn" type="button">Save Config</button>
+      <span id="igCostCounter" class="cost-counter" title="Estimated total cost in this browser tab only. Shared with the How to Draw page.">
+        <span>Total Cost:</span>
+        <span class="cost-amount" id="igCostAmount">$0.0000</span>
+        <button type="button" class="cost-reset" id="igCostReset" title="Reset this tab's cost counter">↺</button>
+      </span>
+      <span id="igBalanceCounter" class="cost-counter balance-counter" title="Manually-entered prepaid balance, shared across tabs. Click the value to set or update.">
+        <span>Remaining Balance:</span>
+        <span class="cost-amount balance-clickable" id="igBalanceAmount">— set —</span>
+      </span>
+      <span id="igSaveConfigWarning" class="save-config-warning"></span>
+      <span class="status" id="igStatus"></span>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Results</h2>
+    <div id="igErrorBanner" class="error-banner"></div>
+    <div id="igResultsGrid" class="results-grid">
+      <div class="empty-state">No generations yet. Type a prompt and press START.</div>
+    </div>
+  </div>
+</div><!-- /page-imagegen -->
 </main>
+
+<div id="settingsModal" class="settings-modal">
+  <div class="settings-box">
+    <button type="button" class="settings-close" id="settingsCloseBtn">✕</button>
+    <h2>Settings</h2>
+
+    <div class="settings-field">
+      <label for="keyGemini">Gemini API Key</label>
+      <div class="settings-row">
+        <input type="text" id="keyGemini" spellcheck="false" autocomplete="off" placeholder="Paste your Gemini API key" />
+        <button type="button" class="key-edit-btn" data-key="gemini">Edit</button>
+      </div>
+    </div>
+
+    <div class="settings-field">
+      <label for="keyOpenai">GPT API Key</label>
+      <div class="settings-row">
+        <input type="text" id="keyOpenai" spellcheck="false" autocomplete="off" placeholder="Paste your OpenAI API key" />
+        <button type="button" class="key-edit-btn" data-key="openai">Edit</button>
+      </div>
+    </div>
+
+    <div class="settings-field">
+      <label for="keyIdeogram">Ideogram API Key</label>
+      <div class="settings-row">
+        <input type="text" id="keyIdeogram" spellcheck="false" autocomplete="off" placeholder="Paste your Ideogram API key" />
+        <button type="button" class="key-edit-btn" data-key="ideogram">Edit</button>
+      </div>
+    </div>
+
+    <p class="settings-hint">Keys are stored only in this browser's local storage — they are never written into the page source or sent anywhere except the matching provider's API.</p>
+
+    <div class="settings-actions">
+      <button type="button" id="settingsCancelBtn">Cancel</button>
+      <button type="button" id="settingsSaveBtn">Save</button>
+    </div>
+  </div>
+</div>
 
 <div id="previewModal" class="preview-modal"><img id="previewImg" alt="" /></div>
 
@@ -628,10 +1117,55 @@
 /* ===========================================================
    Configuration
    =========================================================== */
-const API_KEY = "AQ.Ab8RN6LMyCwtAReVlYKzkuGcwET84875Jsvbhwy9fm5xLdu9hw";
+/* -----------------------------------------------------------
+   API keys
+
+   Keys are NOT hardcoded. They are entered by the user through the
+   Settings dialog and persisted in this browser's localStorage, so the
+   source file can be published (e.g. to GitHub) without leaking secrets.
+   ----------------------------------------------------------- */
+const API_KEYS_STORAGE_KEY = "howtodraw_api_keys_v1";
+const API_KEY_PROVIDERS = ["gemini", "openai", "ideogram"];
+const API_KEY_LABELS = {
+  gemini: "Gemini",
+  openai: "GPT (OpenAI)",
+  ideogram: "Ideogram"
+};
+
+function loadApiKeys() {
+  try {
+    const raw = localStorage.getItem(API_KEYS_STORAGE_KEY);
+    if (!raw) return {};
+    const obj = JSON.parse(raw);
+    return (obj && typeof obj === "object") ? obj : {};
+  } catch { return {}; }
+}
+
+function persistApiKeys(obj) {
+  try { localStorage.setItem(API_KEYS_STORAGE_KEY, JSON.stringify(obj)); }
+  catch (e) { console.warn("Failed to persist API keys:", e); }
+}
+
+function getApiKey(provider) {
+  const k = loadApiKeys()[provider];
+  return (typeof k === "string" && k.trim()) ? k.trim() : "";
+}
+
+// Throw a clear, actionable error when a key is missing so the per-subject
+// box tells the user exactly what to do instead of failing with a raw 401.
+function requireApiKey(provider) {
+  const k = getApiKey(provider);
+  if (!k) {
+    throw new Error(
+      `No ${API_KEY_LABELS[provider]} API key set. Open the menu (☰) → Settings and paste your key.`
+    );
+  }
+  return k;
+}
+
 const API_BASE = "https://generativelanguage.googleapis.com/v1beta/models/";
-const OPENAI_API_KEY = "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";
 const OPENAI_API_BASE = "https://api.openai.com/v1/images/generations";
+const OPENAI_EDIT_API_BASE = "https://api.openai.com/v1/images/edits";
 const CONCURRENCY = 3;
 const API_FALLBACK_RATIO = "3:2";
 const CUSTOM_RATIO_DEFAULT = "333:215";
@@ -678,10 +1212,11 @@ const OPENAI_QUALITY_MAP = { "1K": "low", "2K": "medium", "4K": "high" };
 // the CORS header on the way back. If the proxy isn't running the code below
 // catches the fetch error and shows a friendly "start the proxy" message
 // instead of the raw browser error.
-const IDEOGRAM_API_KEY = "zcc6S0TjqKKz9ThMQGo-Pc4kRFBIGdlFWdwT2ya5v0jYuzXW6yNCYw8puzpkZ0OKiNqZZpnOVm1LPtlaK4mHkw";
 const IDEOGRAM_PROXY_BASE = "http://localhost:8787";
 const IDEOGRAM_UPSTREAM = "https://api.ideogram.ai/v1/ideogram-v3/generate";
+const IDEOGRAM_REMIX_UPSTREAM = "https://api.ideogram.ai/v1/ideogram-v3/remix";
 const IDEOGRAM_API_BASE = `${IDEOGRAM_PROXY_BASE}/proxy?url=${encodeURIComponent(IDEOGRAM_UPSTREAM)}`;
+const IDEOGRAM_REMIX_API_BASE = `${IDEOGRAM_PROXY_BASE}/proxy?url=${encodeURIComponent(IDEOGRAM_REMIX_UPSTREAM)}`;
 // Map UI colon ratios → Ideogram v3 API "x"-style enum values.
 const IDEOGRAM_RATIO_TO_API = {
   "1:1":   "1x1",
@@ -1362,7 +1897,7 @@ async function callGeminiImage(modelKey, staticText, dynamicText, selectedRatio,
   const apiRatio = supported.includes(selectedRatio) ? selectedRatio : API_FALLBACK_RATIO;
   const imageSize = ["1K", "2K", "4K"].includes(quality) ? quality : "2K";
   console.log("[Gemini request]", { model: modelId, aspectRatio: apiRatio, imageSize: imageSize });
-  const url = `${API_BASE}${modelId}:generateContent?key=${encodeURIComponent(API_KEY)}`;
+  const url = `${API_BASE}${modelId}:generateContent?key=${encodeURIComponent(requireApiKey("gemini"))}`;
   const body = {
     contents: [{
       role: "user",
@@ -1485,9 +2020,7 @@ async function callOpenAIImage(modelKey, tpl, vars, subject, selectedRatio, qual
   const oaQuality = OPENAI_QUALITY_MAP[quality] || "medium";
   const fullPrompt = buildOpenAIPrompt(tpl, vars, subject);
   console.log("[OpenAI request]", { model: modelId, size: size, quality: oaQuality, promptLength: fullPrompt.length });
-  if (!OPENAI_API_KEY || OPENAI_API_KEY.indexOf("sk-") !== 0) {
-    throw new Error("OPENAI_API_KEY is not set in the source.");
-  }
+  const openaiKey = requireApiKey("openai");
   const body = {
     model: modelId,
     prompt: fullPrompt,
@@ -1509,7 +2042,7 @@ async function callOpenAIImage(modelKey, tpl, vars, subject, selectedRatio, qual
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${OPENAI_API_KEY}`
+          "Authorization": `Bearer ${openaiKey}`
         },
         body: JSON.stringify(body),
         signal: controller.signal,
@@ -1725,9 +2258,7 @@ async function callIdeogramImage(modelKey, tpl, vars, subject, selectedRatio, qu
   const fullPrompt = buildIdeogramPrompt(tpl, vars, subject);
   console.log("[Ideogram request]", { model: modelId, aspect_ratio: apiRatio, rendering_speed: renderingSpeed, promptLength: fullPrompt.length });
   console.log("[Ideogram prompt]", fullPrompt);
-  if (!IDEOGRAM_API_KEY || IDEOGRAM_API_KEY.length < 10) {
-    throw new Error("IDEOGRAM_API_KEY is not set in the source.");
-  }
+  const ideogramKey = requireApiKey("ideogram");
 
   // Ideogram v3 requires multipart/form-data. Building a FormData object
   // lets the browser set the multipart boundary automatically.
@@ -1752,7 +2283,7 @@ async function callIdeogramImage(modelKey, tpl, vars, subject, selectedRatio, qu
     try {
       resp = await fetch(IDEOGRAM_API_BASE, {
         method: "POST",
-        headers: { "Api-Key": IDEOGRAM_API_KEY },
+        headers: { "Api-Key": ideogramKey },
         body: buildForm(),
         signal: controller.signal,
         cache: "no-store",
@@ -1834,6 +2365,346 @@ async function callImageModel(modelKey, tpl, vars, subject, selectedRatio, quali
   const staticText = flattenPromptStatic(tpl, vars);
   const dynamicText = buildSubjectSuffix(subject);
   return await callGeminiImage(modelKey, staticText, dynamicText, selectedRatio, quality, onRateLimited);
+}
+
+/* ===========================================================
+   IMAGE GENERATOR — free-form / edit API layer
+
+   The How-to-Draw page sends a fixed worksheet template. The Image
+   Generator instead sends a user-written prompt, optionally together with
+   an image to EDIT and/or a single style REFERENCE image.
+
+   STRATEGY NOTES (studied per provider, quality prioritised over cost, as
+   requested in the spec):
+
+   * Multiple images to edit -> ONE REQUEST PER IMAGE.
+     None of the three providers batch-edit N images into N separate
+     outputs: OpenAI's `image[]` array composes all inputs into ONE picture,
+     Gemini treats extra images as composition references, and Ideogram's
+     remix takes a single image. Sending one request per image is therefore
+     the only way to get one edited result per input, and it also gives us
+     one result card per source image (matching the How-to-Draw layout).
+
+   * Variations (Generation per image, 1-4) -> N SEPARATE REQUESTS.
+     OpenAI (`n`) and Ideogram (`num_images`) can return several images from
+     one call, but Gemini's image models do not document a working
+     candidateCount for image output, so a single code path is only possible
+     with separate calls. Separate calls also produce genuinely independent
+     samples (more diverse variations = higher chance of a usable one),
+     let each variation retry on its own after a 429, and stream into the
+     UI as they land. Cost is identical either way — billing is per image.
+   =========================================================== */
+
+// data:image/png;base64,xxxx  ->  { mime, base64 }
+function splitDataUrl(dataUrl) {
+  const m = /^data:([^;,]+)?(;base64)?,(.*)$/s.exec(dataUrl || "");
+  if (!m) return { mime: "image/png", base64: "" };
+  return { mime: m[1] || "image/png", base64: m[3] || "" };
+}
+
+function base64ToBlob(base64, mime) {
+  const bin = atob(base64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new Blob([bytes], { type: mime || "image/png" });
+}
+
+async function blobToDataUrl(blob) {
+  const buf = await blob.arrayBuffer();
+  const bytes = new Uint8Array(buf);
+  let bin = "";
+  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+  const b64 = btoa(bin);
+  const mime = blob.type || "image/png";
+  return { dataUrl: `data:${mime};base64,${b64}`, base64: b64, mime };
+}
+
+/* Build the natural-language prompt actually sent to the model.
+   It folds in the generation mode plus the names of the edit / reference
+   images so the model knows what role each attached picture plays. */
+function buildImageGenPrompt(opts) {
+  const { userPrompt, mode, editImage, refImage } = opts;
+  const parts = [];
+
+  if (mode === "edit" && editImage) {
+    parts.push(
+      `Edit and recreate the attached source image "${editImage.name}" according to the following instruction, ` +
+      `keeping its overall subject and composition recognisable unless the instruction says otherwise.`
+    );
+  } else {
+    parts.push("Create a new, original, high-quality image according to the following instruction.");
+  }
+
+  parts.push(`\nINSTRUCTION:\n${userPrompt.trim()}`);
+
+  if (refImage) {
+    parts.push(
+      `\nSTYLE REFERENCE: An additional reference image "${refImage.name}" is attached. ` +
+      `Use it as the guide for visual style, colour palette, rendering technique and overall look — ` +
+      `do not copy its subject matter, only its style.`
+    );
+  }
+
+  if (mode === "edit" && editImage) {
+    parts.push(
+      `\nThe FIRST attached image ("${editImage.name}") is the image to edit.` +
+      (refImage ? ` The SECOND attached image ("${refImage.name}") is the style reference only.` : "")
+    );
+  }
+
+  return parts.join("\n");
+}
+
+/* ---------- Gemini (new + edit + reference) ---------- */
+async function igCallGemini(modelKey, prompt, selectedRatio, quality, images, onRateLimited) {
+  const modelId = MODEL_MAP[modelKey];
+  const supported = SUPPORTED_RATIOS[modelKey] || [];
+  const apiRatio = supported.includes(selectedRatio) ? selectedRatio : API_FALLBACK_RATIO;
+  const imageSize = ["1K", "2K", "4K"].includes(quality) ? quality : "2K";
+  const url = `${API_BASE}${modelId}:generateContent?key=${encodeURIComponent(requireApiKey("gemini"))}`;
+
+  const parts = [{ text: prompt }];
+  for (const img of images) {
+    parts.push({ inline_data: { mime_type: img.mime, data: img.base64 } });
+  }
+
+  const body = {
+    contents: [{ role: "user", parts }],
+    generationConfig: {
+      responseModalities: ["IMAGE"],
+      candidateCount: 1,
+      imageConfig: { aspectRatio: apiRatio, imageSize: imageSize }
+    }
+  };
+
+  let resp, lastErrText = "", attempt = 0;
+  while (true) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 180000);
+    try {
+      resp = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+        cache: "no-store"
+      });
+    } catch (e) {
+      clearTimeout(timeoutId);
+      if (e.name === "AbortError") throw new Error("Request timed out after 180s");
+      throw e;
+    }
+    clearTimeout(timeoutId);
+    if (!resp.ok && attempt < API_RETRY_MAX_ATTEMPTS) {
+      lastErrText = await resp.text().catch(() => "");
+      if (isRetriableApiError(resp.status, lastErrText)) {
+        attempt += 1;
+        console.warn(`[IG Gemini ${resp.status}] retry ${attempt}/${API_RETRY_MAX_ATTEMPTS} in ${API_RETRY_WAIT_MS / 1000}s`);
+        if (typeof onRateLimited === "function") {
+          try { onRateLimited({ attempt, max: API_RETRY_MAX_ATTEMPTS, waitMs: API_RETRY_WAIT_MS }); } catch (_) {}
+        }
+        await new Promise(r => setTimeout(r, API_RETRY_WAIT_MS));
+        continue;
+      }
+    }
+    break;
+  }
+  if (!resp.ok) {
+    const txt = lastErrText || (await resp.text().catch(() => ""));
+    throw new Error(`HTTP ${resp.status}: ${txt.slice(0, 300)}`);
+  }
+  const data = await resp.json();
+  const respParts = data?.candidates?.[0]?.content?.parts || [];
+  for (const part of respParts) {
+    const inline = part.inlineData || part.inline_data;
+    if (inline && inline.data) {
+      const mime = inline.mimeType || inline.mime_type || "image/png";
+      return { dataUrl: `data:${mime};base64,${inline.data}`, base64: inline.data, mime };
+    }
+  }
+  throw new Error("No image in response");
+}
+
+/* ---------- OpenAI (new via /generations, edit via /edits) ---------- */
+async function igCallOpenAI(modelKey, prompt, selectedRatio, quality, images, onRateLimited) {
+  const modelId = MODEL_MAP[modelKey];
+  const apiRatio = OPENAI_RATIO_TO_SIZE[selectedRatio] ? selectedRatio : "3:2";
+  const size = OPENAI_RATIO_TO_SIZE[apiRatio];
+  const oaQuality = OPENAI_QUALITY_MAP[quality] || "medium";
+  const openaiKey = requireApiKey("openai");
+  const isEdit = images.length > 0;
+  const endpoint = isEdit ? OPENAI_EDIT_API_BASE : OPENAI_API_BASE;
+
+  function buildRequestInit() {
+    if (isEdit) {
+      // multipart/form-data; image[] carries the source (and optional reference).
+      const form = new FormData();
+      form.append("model", modelId);
+      form.append("prompt", prompt);
+      form.append("n", "1");
+      form.append("size", size);
+      form.append("quality", oaQuality);
+      for (const img of images) {
+        form.append("image[]", base64ToBlob(img.base64, img.mime), img.name || "image.png");
+      }
+      return { headers: { "Authorization": `Bearer ${openaiKey}` }, body: form };
+    }
+    return {
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${openaiKey}` },
+      body: JSON.stringify({
+        model: modelId, prompt, n: 1, size, quality: oaQuality,
+        output_format: "png", background: "opaque"
+      })
+    };
+  }
+
+  let resp, lastErrText = "", attempt = 0;
+  while (true) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 180000);
+    const init = buildRequestInit();
+    try {
+      resp = await fetch(endpoint, {
+        method: "POST", headers: init.headers, body: init.body,
+        signal: controller.signal, cache: "no-store"
+      });
+    } catch (e) {
+      clearTimeout(timeoutId);
+      if (e.name === "AbortError") throw new Error("Request timed out after 180s");
+      throw e;
+    }
+    clearTimeout(timeoutId);
+    if (!resp.ok && attempt < API_RETRY_MAX_ATTEMPTS) {
+      lastErrText = await resp.text().catch(() => "");
+      if (isRetriableApiError(resp.status, lastErrText)) {
+        attempt += 1;
+        console.warn(`[IG OpenAI ${resp.status}] retry ${attempt}/${API_RETRY_MAX_ATTEMPTS} in ${API_RETRY_WAIT_MS / 1000}s`);
+        if (typeof onRateLimited === "function") {
+          try { onRateLimited({ attempt, max: API_RETRY_MAX_ATTEMPTS, waitMs: API_RETRY_WAIT_MS }); } catch (_) {}
+        }
+        await new Promise(r => setTimeout(r, API_RETRY_WAIT_MS));
+        continue;
+      }
+    }
+    break;
+  }
+  if (!resp.ok) {
+    const txt = lastErrText || (await resp.text().catch(() => ""));
+    throw new Error(`HTTP ${resp.status}: ${txt.slice(0, 300)}`);
+  }
+  const data = await resp.json();
+  const item = data?.data?.[0];
+  if (!item) throw new Error("No image in response");
+  if (item.b64_json) {
+    return {
+      dataUrl: `data:image/png;base64,${item.b64_json}`,
+      base64: item.b64_json, mime: "image/png",
+      openaiSize: size, openaiQuality: oaQuality
+    };
+  }
+  if (item.url) {
+    const imgResp = await fetch(item.url, { cache: "no-store" });
+    if (!imgResp.ok) throw new Error(`Failed to fetch image URL: HTTP ${imgResp.status}`);
+    const out = await blobToDataUrl(await imgResp.blob());
+    return { ...out, openaiSize: size, openaiQuality: oaQuality };
+  }
+  throw new Error("No image in response");
+}
+
+/* ---------- Ideogram (new via /generate, edit via /remix) ---------- */
+async function igCallIdeogram(modelKey, prompt, selectedRatio, quality, images, onRateLimited) {
+  const apiRatio = IDEOGRAM_RATIO_TO_API[selectedRatio] || IDEOGRAM_RATIO_TO_API["3:2"];
+  const renderingSpeed = ["TURBO", "DEFAULT", "QUALITY"].includes(quality) ? quality : "DEFAULT";
+  const ideogramKey = requireApiKey("ideogram");
+  // images[0] = image to edit (remix), images[1] = optional style reference.
+  const editImg = images[0] || null;
+  const refImg = images[1] || null;
+  const endpoint = editImg ? IDEOGRAM_REMIX_API_BASE : IDEOGRAM_API_BASE;
+
+  function buildForm() {
+    const form = new FormData();
+    form.append("prompt", prompt);
+    form.append("aspect_ratio", apiRatio);
+    form.append("rendering_speed", renderingSpeed);
+    form.append("magic_prompt", "OFF");
+    form.append("num_images", "1");
+    if (editImg) {
+      form.append("image", base64ToBlob(editImg.base64, editImg.mime), editImg.name || "image.png");
+      form.append("image_weight", "60");
+    }
+    if (refImg) {
+      form.append("style_reference_images", base64ToBlob(refImg.base64, refImg.mime), refImg.name || "ref.png");
+    }
+    return form;
+  }
+
+  let resp, lastErrText = "", attempt = 0;
+  while (true) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 180000);
+    try {
+      resp = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Api-Key": ideogramKey },
+        body: buildForm(),
+        signal: controller.signal, cache: "no-store"
+      });
+    } catch (e) {
+      clearTimeout(timeoutId);
+      if (e.name === "AbortError") throw new Error("Request timed out after 180s");
+      if (String(e.message || "").toLowerCase().includes("failed to fetch")) {
+        throw new Error(
+          "Cannot reach the CORS proxy at " + IDEOGRAM_PROXY_BASE +
+          '. Start it by running "python3 cors-proxy.py" from the Website_drawing folder, then try again.'
+        );
+      }
+      throw e;
+    }
+    clearTimeout(timeoutId);
+    if (!resp.ok && attempt < API_RETRY_MAX_ATTEMPTS) {
+      lastErrText = await resp.text().catch(() => "");
+      if (isRetriableApiError(resp.status, lastErrText)) {
+        attempt += 1;
+        console.warn(`[IG Ideogram ${resp.status}] retry ${attempt}/${API_RETRY_MAX_ATTEMPTS} in ${API_RETRY_WAIT_MS / 1000}s`);
+        if (typeof onRateLimited === "function") {
+          try { onRateLimited({ attempt, max: API_RETRY_MAX_ATTEMPTS, waitMs: API_RETRY_WAIT_MS }); } catch (_) {}
+        }
+        await new Promise(r => setTimeout(r, API_RETRY_WAIT_MS));
+        continue;
+      }
+    }
+    break;
+  }
+  if (!resp.ok) {
+    const txt = lastErrText || (await resp.text().catch(() => ""));
+    throw new Error(`HTTP ${resp.status}: ${txt.slice(0, 300)}`);
+  }
+  const data = await resp.json();
+  const item = data?.data?.[0];
+  if (!item?.url) throw new Error("No image URL in Ideogram response");
+  const proxied = `${IDEOGRAM_PROXY_BASE}/proxy?url=${encodeURIComponent(item.url)}`;
+  const imgResp = await fetch(proxied, { cache: "no-store" });
+  if (!imgResp.ok) throw new Error(`Failed to fetch image URL: HTTP ${imgResp.status}`);
+  const out = await blobToDataUrl(await imgResp.blob());
+  return { ...out, ideogramResolution: item.resolution, ideogramSpeed: renderingSpeed };
+}
+
+/* Dispatcher for the Image Generator page. */
+async function callImageGen(opts) {
+  const { modelKey, userPrompt, mode, quality, aspect, editImage, refImage, onRateLimited } = opts;
+  const prompt = buildImageGenPrompt({ userPrompt, mode, editImage, refImage });
+  // Order matters: the image being edited always comes first.
+  const images = [];
+  if (mode === "edit" && editImage) images.push(editImage);
+  if (refImage) images.push(refImage);
+
+  if (modelKey === "openai_image_2") {
+    return await igCallOpenAI(modelKey, prompt, aspect, quality, images, onRateLimited);
+  }
+  if (modelKey === "ideogram_v3") {
+    return await igCallIdeogram(modelKey, prompt, aspect, quality, images, onRateLimited);
+  }
+  return await igCallGemini(modelKey, prompt, aspect, quality, images, onRateLimited);
 }
 
 /* ===========================================================
@@ -1940,15 +2811,18 @@ function decrementBalance(amount) {
 }
 
 function updateBalanceDisplay() {
-  const el = document.getElementById("balanceAmount");
-  if (!el) return;
   const v = loadBalance();
-  if (v === null) {
-    el.textContent = "— set —";
-    el.classList.add("balance-unset");
-  } else {
-    el.textContent = `$${v.toFixed(4)}`;
-    el.classList.remove("balance-unset");
+  // Both pages show the same shared balance.
+  for (const id of ["balanceAmount", "igBalanceAmount"]) {
+    const el = document.getElementById(id);
+    if (!el) continue;
+    if (v === null) {
+      el.textContent = "— set —";
+      el.classList.add("balance-unset");
+    } else {
+      el.textContent = `$${v.toFixed(4)}`;
+      el.classList.remove("balance-unset");
+    }
   }
 }
 
@@ -1993,12 +2867,16 @@ function recordImageCost(modelKey, quality, openaiSize) {
 }
 
 function updateCostCounter() {
-  const el = document.getElementById("costAmount");
-  if (!el) return;
-  el.textContent = `$${state.totalCost.toFixed(4)}`;
-  const counter = document.getElementById("costCounter");
-  if (counter) {
-    counter.title = `Estimated cost since last reset across ${state.imageCount} image(s). Approximate, based on published per-image rates: Google — Pro 1K/2K $0.134, Pro 4K $0.24, Flash 1K $0.067, Flash 2K $0.101, Flash 4K $0.151. OpenAI gpt-image-2 — low ~$0.005, medium ~$0.041, high ~$0.165 (3:2 / 2:3); square (1:1) is slightly higher. Ideogram V3 — Turbo $0.03, Default $0.06, Quality $0.09.`;
+  const amount = `$${state.totalCost.toFixed(4)}`;
+  const title = `Estimated cost since last reset across ${state.imageCount} image(s). Approximate, based on published per-image rates: Google — Pro 1K/2K $0.134, Pro 4K $0.24, Flash 1K $0.067, Flash 2K $0.101, Flash 4K $0.151. OpenAI gpt-image-2 — low ~$0.005, medium ~$0.041, high ~$0.165 (3:2 / 2:3); square (1:1) is slightly higher. Ideogram V3 — Turbo $0.03, Default $0.06, Quality $0.09.`;
+  // Both pages show the same shared counter.
+  for (const id of ["costAmount", "igCostAmount"]) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = amount;
+  }
+  for (const id of ["costCounter", "igCostCounter"]) {
+    const el = document.getElementById(id);
+    if (el) el.title = title;
   }
 }
 
@@ -2188,12 +3066,13 @@ async function generateOne(idx, cfg) {
 // While the retry timer is counting down the box shows a small badge and
 // a per-second tick so the user sees that the request is automatically
 // being re-sent rather than stuck.
-function makeRateLimitHandler(item) {
+function makeRateLimitHandler(item, rerender) {
+  const draw = typeof rerender === "function" ? rerender : renderGrid;
   return function ({ attempt, max, waitMs }) {
     if (item.retryTimer) clearInterval(item.retryTimer);
     let remaining = Math.ceil(waitMs / 1000);
     item.retryInfo = { attempt, max, waitSec: remaining };
-    renderGrid();
+    draw();
     item.retryTimer = setInterval(() => {
       remaining -= 1;
       if (remaining <= 0) {
@@ -2202,7 +3081,7 @@ function makeRateLimitHandler(item) {
         return;
       }
       item.retryInfo = { attempt, max, waitSec: remaining };
-      renderGrid();
+      draw();
     }, 1000);
   };
 }
@@ -2388,9 +3267,35 @@ function populateQualityDropdown(preserveValue) {
 /* ===========================================================
    Saved configs (localStorage + custom dropdown)
    =========================================================== */
+/* The Configs button in the header is shared by both pages, but each page
+   stores and compares only its own fields. Everything below therefore
+   dispatches on `currentPage`. */
+const IG_CONFIGS_STORAGE_KEY = "imagegen_saved_configs_v1";
+
+const IG_DEFAULT_CONFIG_VALUES = {
+  prompt: "",
+  model: "pro",
+  quality: "2K",
+  variations: "1",
+  mode: "new"
+};
+
+const PAGE_CONFIG_KEYS = {
+  draw:     ["subjects","aspect","steps","age","pathWidth","style","lineStyle","model","prompt","quality"],
+  imagegen: ["prompt","model","quality","variations","mode"]
+};
+
+function configStorageKeyFor(page) {
+  return page === "imagegen" ? IG_CONFIGS_STORAGE_KEY : CONFIGS_STORAGE_KEY;
+}
+
+function defaultConfigValuesFor(page) {
+  return page === "imagegen" ? IG_DEFAULT_CONFIG_VALUES : DEFAULT_CONFIG_VALUES;
+}
+
 function loadConfigs() {
   try {
-    const raw = localStorage.getItem(CONFIGS_STORAGE_KEY);
+    const raw = localStorage.getItem(configStorageKeyFor(currentPage));
     if (!raw) return [];
     const arr = JSON.parse(raw);
     return Array.isArray(arr) ? arr : [];
@@ -2398,11 +3303,20 @@ function loadConfigs() {
 }
 
 function persistConfigs(arr) {
-  try { localStorage.setItem(CONFIGS_STORAGE_KEY, JSON.stringify(arr)); }
+  try { localStorage.setItem(configStorageKeyFor(currentPage), JSON.stringify(arr)); }
   catch (e) { console.warn("Failed to persist configs:", e); }
 }
 
 function snapshotConfig() {
+  if (currentPage === "imagegen") {
+    return {
+      prompt:     document.getElementById("igPrompt").value,
+      model:      document.getElementById("igModel").value,
+      quality:    document.getElementById("igQuality").value,
+      variations: document.getElementById("igVariations").value,
+      mode:       document.getElementById("igMode").value
+    };
+  }
   return {
     subjects: document.getElementById("subjects").value,
     aspect:   document.getElementById("aspect").value,
@@ -2419,6 +3333,22 @@ function snapshotConfig() {
 
 function applyConfigValues(v, name) {
   if (!v) return;
+  if (currentPage === "imagegen") {
+    if (v.prompt !== undefined) document.getElementById("igPrompt").value = v.prompt;
+    if (v.model !== undefined) document.getElementById("igModel").value = v.model;
+    igPopulateQualityDropdown(v.quality);
+    if (v.quality !== undefined) document.getElementById("igQuality").value = v.quality;
+    if (v.variations !== undefined) document.getElementById("igVariations").value = v.variations;
+    if (v.mode !== undefined) document.getElementById("igMode").value = v.mode;
+    if (name) {
+      selectedConfigName = name;
+      justSavedValues = snapshotConfig();
+    }
+    igRefreshModeUI();
+    igRefreshStartBtn();
+    refreshSaveConfigStatus();
+    return;
+  }
   if (v.subjects !== undefined) document.getElementById("subjects").value = v.subjects;
   if (v.model !== undefined) document.getElementById("model").value = v.model;
   populateAspectDropdown(v.aspect);
@@ -2440,7 +3370,7 @@ function applyConfigValues(v, name) {
 
 function getSelectedConfigEntry() {
   if (selectedConfigName === DEFAULT_CONFIG_NAME) {
-    return { name: DEFAULT_CONFIG_NAME, values: DEFAULT_CONFIG_VALUES };
+    return { name: DEFAULT_CONFIG_NAME, values: defaultConfigValuesFor(currentPage) };
   }
   return loadConfigs().find(c => c.name === selectedConfigName) || null;
 }
@@ -2536,7 +3466,7 @@ function renderConfigsMenu() {
 
   const userConfigs = loadConfigs();
   const all = [
-    { name: DEFAULT_CONFIG_NAME, values: DEFAULT_CONFIG_VALUES, locked: true },
+    { name: DEFAULT_CONFIG_NAME, values: defaultConfigValuesFor(currentPage), locked: true },
     ...userConfigs.map(c => ({ ...c, locked: false }))
   ];
 
@@ -2605,7 +3535,7 @@ function deleteConfig(idx) {
 
 function valuesEqual(a, b) {
   if (!a || !b) return false;
-  const keys = ["subjects","aspect","steps","age","pathWidth","style","lineStyle","model","prompt","quality"];
+  const keys = PAGE_CONFIG_KEYS[currentPage] || PAGE_CONFIG_KEYS.draw;
   return keys.every(k => String(a[k] ?? "") === String(b[k] ?? ""));
 }
 
@@ -2616,8 +3546,9 @@ function findConfigByValues(values) {
 let justSavedValues = null;
 
 function refreshSaveConfigStatus() {
-  const warn = document.getElementById("saveConfigWarning");
-  const btn = document.getElementById("saveConfigBtn");
+  const isIG = currentPage === "imagegen";
+  const warn = document.getElementById(isIG ? "igSaveConfigWarning" : "saveConfigWarning");
+  const btn = document.getElementById(isIG ? "igSaveConfigBtn" : "saveConfigBtn");
   const current = snapshotConfig();
   btn.disabled = false;
   if (justSavedValues && valuesEqual(justSavedValues, current)) {
@@ -2731,6 +3662,580 @@ function confirmSaveConfig() {
 }
 
 /* ===========================================================
+   Settings dialog (API keys)
+
+   Keys live in localStorage only. A saved key is shown masked and its
+   input is locked; pressing "Edit" unlocks that one field and reveals the
+   real value so it can be replaced. Save commits every unlocked field.
+   =========================================================== */
+const SETTINGS_INPUT_IDS = { gemini: "keyGemini", openai: "keyOpenai", ideogram: "keyIdeogram" };
+// Providers whose field is currently unlocked for editing in the open dialog.
+let settingsUnlocked = {};
+
+// "AbCdEfGh••••••••••••wXyZ1" — enough to recognise the key, not enough to use it.
+function maskApiKey(key) {
+  if (!key) return "";
+  if (key.length <= 14) return key.slice(0, 2) + "•".repeat(Math.max(3, key.length - 4)) + key.slice(-2);
+  return key.slice(0, 8) + "•".repeat(46) + key.slice(-5);
+}
+
+function renderSettingsFields() {
+  const keys = loadApiKeys();
+  for (const provider of API_KEY_PROVIDERS) {
+    const input = document.getElementById(SETTINGS_INPUT_IDS[provider]);
+    const editBtn = document.querySelector(`.key-edit-btn[data-key="${provider}"]`);
+    if (!input) continue;
+    const saved = (keys[provider] || "").trim();
+    const unlocked = !!settingsUnlocked[provider];
+    if (saved && !unlocked) {
+      input.value = maskApiKey(saved);
+      input.disabled = true;
+      if (editBtn) editBtn.classList.remove("hidden");
+    } else {
+      // No key saved yet, or the user pressed Edit: show the real value.
+      if (unlocked) input.value = saved;
+      else if (!saved) input.value = "";
+      input.disabled = false;
+      if (editBtn) editBtn.classList.toggle("hidden", !saved);
+    }
+  }
+}
+
+function openSettings() {
+  settingsUnlocked = {};
+  renderSettingsFields();
+  document.getElementById("settingsModal").classList.add("visible");
+  closeSideMenu();
+}
+
+function closeSettings() {
+  document.getElementById("settingsModal").classList.remove("visible");
+  settingsUnlocked = {};
+}
+
+function saveSettings() {
+  const keys = loadApiKeys();
+  for (const provider of API_KEY_PROVIDERS) {
+    const input = document.getElementById(SETTINGS_INPUT_IDS[provider]);
+    if (!input || input.disabled) continue; // locked + masked => leave untouched
+    const v = input.value.trim();
+    if (v) keys[provider] = v;
+    else delete keys[provider];
+  }
+  persistApiKeys(keys);
+  closeSettings();
+}
+
+/* ===========================================================
+   Page routing (How to Draw  <->  Image Generator)
+   =========================================================== */
+let currentPage = "draw";
+
+const PAGE_META = {
+  draw:     { title: 'How To Draw — Bulk Worksheet Generator <span class="version-tag">V3</span>', navClass: "active-draw" },
+  imagegen: { title: 'Image Generator <span class="version-tag">V3</span>',                        navClass: "active-imagegen" }
+};
+
+function openSideMenu()  { document.getElementById("sideMenu").classList.add("open");    document.getElementById("menuBackdrop").classList.add("visible"); }
+function closeSideMenu() { document.getElementById("sideMenu").classList.remove("open"); document.getElementById("menuBackdrop").classList.remove("visible"); }
+function toggleSideMenu() {
+  document.getElementById("sideMenu").classList.contains("open") ? closeSideMenu() : openSideMenu();
+}
+
+// Each page remembers which of its own configs is selected.
+const selectedConfigNameByPage = { draw: DEFAULT_CONFIG_NAME, imagegen: DEFAULT_CONFIG_NAME };
+
+function switchPage(page) {
+  if (!PAGE_META[page] || page === currentPage) {
+    if (PAGE_META[page]) closeSideMenu();
+    return;
+  }
+  // Park the outgoing page's selection, restore the incoming page's.
+  selectedConfigNameByPage[currentPage] = selectedConfigName;
+  currentPage = page;
+  selectedConfigName = selectedConfigNameByPage[page] || DEFAULT_CONFIG_NAME;
+  justSavedValues = null;
+  document.querySelectorAll(".page").forEach(el => el.classList.remove("active"));
+  document.getElementById("page-" + page).classList.add("active");
+  document.getElementById("headerTitle").innerHTML = PAGE_META[page].title;
+  document.querySelectorAll(".side-menu .nav-item[data-page]").forEach(btn => {
+    btn.classList.remove("active-draw", "active-imagegen");
+    if (btn.dataset.page === page) btn.classList.add(PAGE_META[page].navClass);
+  });
+  closeSideMenu();
+  // The Configs button is shared, so re-point it at the active page's configs.
+  renderConfigsMenu();
+  refreshSaveConfigStatus();
+}
+
+/* ===========================================================
+   IMAGE GENERATOR — state & UI
+   =========================================================== */
+const IG_MAX_EDIT_IMAGES = 20;
+
+const igState = {
+  items: [],        // { name, status, variants:[{dataUrl,base64,mime,cost}], activeVariant, ... }
+  running: false,
+  editImages: [],   // { name, base64, mime, dataUrl }
+  refImage: null    // { name, base64, mime, dataUrl }
+};
+
+function igReadConfig() {
+  return {
+    prompt:     document.getElementById("igPrompt").value,
+    model:      document.getElementById("igModel").value,
+    quality:    document.getElementById("igQuality").value,
+    variations: parseInt(document.getElementById("igVariations").value, 10) || 1,
+    mode:       document.getElementById("igMode").value,
+    // The Image Generator has no aspect-ratio control; use each backend's
+    // natural default so the model picks a sensible framing.
+    aspect:     API_FALLBACK_RATIO
+  };
+}
+
+function igRefreshStartBtn() {
+  const btn = document.getElementById("igStartBtn");
+  if (igState.running) { btn.disabled = true; return; }
+  btn.disabled = document.getElementById("igPrompt").value.trim().length === 0;
+}
+
+// The blue "+" is only usable in Edit mode, per spec.
+function igRefreshModeUI() {
+  const mode = document.getElementById("igMode").value;
+  const addBtn = document.getElementById("igAddEditBtn");
+  const isEdit = mode === "edit";
+  addBtn.disabled = !isEdit || igState.editImages.length >= IG_MAX_EDIT_IMAGES;
+  addBtn.title = isEdit
+    ? `Add images to edit (up to ${IG_MAX_EDIT_IMAGES})`
+    : 'Switch Generation Mode to "Edit" to attach images';
+  igRenderThumbs();
+}
+
+function igRenderThumbs() {
+  const editWrap = document.getElementById("igEditThumbs");
+  const refWrap = document.getElementById("igRefThumbs");
+  const countEl = document.getElementById("igEditCount");
+
+  editWrap.innerHTML = "";
+  igState.editImages.forEach((img, i) => {
+    editWrap.appendChild(igMakeThumb(img, () => {
+      igState.editImages.splice(i, 1);
+      igRefreshModeUI();
+    }));
+  });
+  countEl.textContent = igState.editImages.length
+    ? `${igState.editImages.length}/${IG_MAX_EDIT_IMAGES}`
+    : "";
+
+  refWrap.innerHTML = "";
+  if (igState.refImage) {
+    refWrap.appendChild(igMakeThumb(igState.refImage, () => {
+      igState.refImage = null;
+      igRenderThumbs();
+    }));
+  }
+  document.getElementById("igAddRefBtn").disabled = !!igState.refImage;
+}
+
+function igMakeThumb(img, onRemove) {
+  const d = document.createElement("div");
+  d.className = "ig-thumb";
+  d.title = img.name;
+  const im = document.createElement("img");
+  im.src = img.dataUrl;
+  im.alt = img.name;
+  const x = document.createElement("button");
+  x.type = "button";
+  x.className = "ig-thumb-x";
+  x.innerHTML = "&times;";
+  x.title = "Remove " + img.name;
+  x.onclick = (e) => { e.stopPropagation(); onRemove(); };
+  d.append(im, x);
+  return d;
+}
+
+function igReadFile(file) {
+  return new Promise((resolve, reject) => {
+    const fr = new FileReader();
+    fr.onerror = () => reject(new Error("Could not read " + file.name));
+    fr.onload = () => {
+      const { mime, base64 } = splitDataUrl(fr.result);
+      resolve({ name: file.name, mime: mime || file.type || "image/png", base64, dataUrl: fr.result });
+    };
+    fr.readAsDataURL(file);
+  });
+}
+
+async function igHandleEditFiles(fileList) {
+  const files = Array.from(fileList || []);
+  const room = IG_MAX_EDIT_IMAGES - igState.editImages.length;
+  if (room <= 0) { alert(`Maximum ${IG_MAX_EDIT_IMAGES} images to edit.`); return; }
+  const take = files.slice(0, room);
+  if (files.length > room) alert(`Only ${room} more image(s) can be added (max ${IG_MAX_EDIT_IMAGES}).`);
+  for (const f of take) {
+    try { igState.editImages.push(await igReadFile(f)); }
+    catch (e) { console.warn(e); }
+  }
+  igRefreshModeUI();
+}
+
+async function igHandleRefFile(fileList) {
+  const f = (fileList || [])[0];
+  if (!f) return;
+  try { igState.refImage = await igReadFile(f); igRenderThumbs(); }
+  catch (e) { alert(e.message); }
+}
+
+/* ---------- results rendering (with variation carousel) ---------- */
+function igRenderGrid() {
+  const grid = document.getElementById("igResultsGrid");
+  if (igState.items.length === 0) {
+    grid.innerHTML = '<div class="empty-state">No generations yet. Type a prompt and press START.</div>';
+    return;
+  }
+  grid.innerHTML = "";
+  igState.items.forEach((item, idx) => {
+    const card = document.createElement("div");
+    let cls = "card";
+    if (item.loading) cls += " loading";
+    if (item.downloaded) cls += " downloaded";
+    if (item.regenerated) cls += " regenerated";
+    card.className = cls;
+
+    // Dots row above the image: one dot per requested variation.
+    const dots = document.createElement("div");
+    dots.className = "ig-dots";
+    if (item.total > 1) {
+      for (let v = 0; v < item.total; v++) {
+        const dot = document.createElement("button");
+        dot.type = "button";
+        dot.className = "ig-dot" + (v === item.activeVariant ? " active" : "");
+        dot.title = `Variation ${v + 1}`;
+        dot.onclick = () => { item.activeVariant = v; igRenderGrid(); };
+        dots.appendChild(dot);
+      }
+    }
+
+    const thumb = document.createElement("div");
+    thumb.className = "thumb";
+    const active = item.variants[item.activeVariant];
+
+    if (item.status === "pending") {
+      thumb.classList.add("pending");
+      if (item.retryInfo) {
+        const info = document.createElement("div");
+        info.className = "retry-info";
+        info.textContent = `API busy — retrying in ${item.retryInfo.waitSec}s (attempt ${item.retryInfo.attempt}/${item.retryInfo.max})`;
+        thumb.appendChild(info);
+      }
+    } else if (item.status === "error") {
+      thumb.classList.add("error");
+      thumb.textContent = "Failed: " + (item.error || "unknown error");
+    } else if (item.status === "done" && active) {
+      if (item.total > 1) thumb.classList.add("swipeable");
+      const img = document.createElement("img");
+      img.src = active.dataUrl;
+      img.alt = item.name;
+      img.addEventListener("click", () => igOpenPreview(item));
+      thumb.appendChild(img);
+
+      const dimBadge = document.createElement("div");
+      dimBadge.className = "dim-badge";
+      dimBadge.textContent = "measuring…";
+      thumb.appendChild(dimBadge);
+
+      if (typeof active.cost === "number") {
+        const costBadge = document.createElement("div");
+        costBadge.className = "cost-badge";
+        costBadge.textContent = `$${active.cost.toFixed(4)}`;
+        thumb.appendChild(costBadge);
+      }
+      if (item.total > 1) {
+        const vb = document.createElement("div");
+        vb.className = "var-badge";
+        vb.textContent = `${item.activeVariant + 1} / ${item.total}`;
+        thumb.appendChild(vb);
+      }
+      img.addEventListener("load", () => {
+        dimBadge.textContent = `${img.naturalWidth} × ${img.naturalHeight}`;
+      }, { once: true });
+
+      // Horizontal swipe / drag to move between variations.
+      if (item.total > 1) igAttachSwipe(thumb, item);
+    }
+
+    const label = document.createElement("div");
+    label.className = "label";
+    label.textContent = item.name;
+    label.title = item.name;
+
+    const btns = document.createElement("div");
+    btns.className = "btns";
+
+    const regen = document.createElement("button");
+    regen.textContent = "Regenerate";
+    regen.className = "btn-regen";
+    regen.onclick = () => igRegenerate(idx);
+
+    const preview = document.createElement("button");
+    preview.textContent = "Preview";
+    preview.disabled = item.status !== "done";
+    preview.onclick = () => igOpenPreview(item);
+
+    const dl = document.createElement("button");
+    dl.textContent = "Download";
+    dl.className = "btn-download";
+    dl.disabled = item.status !== "done";
+    dl.onclick = () => igDownloadSingle(item);
+
+    btns.append(regen, preview, dl);
+
+    const overlay = document.createElement("div");
+    overlay.className = "overlay";
+
+    card.append(dots, thumb, label, btns, overlay);
+    grid.appendChild(card);
+  });
+}
+
+// Pointer/touch drag on the thumb steps through variations.
+function igAttachSwipe(thumb, item) {
+  let startX = null;
+  thumb.addEventListener("pointerdown", (e) => { startX = e.clientX; });
+  thumb.addEventListener("pointerup", (e) => {
+    if (startX === null) return;
+    const dx = e.clientX - startX;
+    startX = null;
+    if (Math.abs(dx) < 30) return;
+    const dir = dx < 0 ? 1 : -1;
+    const next = item.activeVariant + dir;
+    if (next < 0 || next >= item.total) return;
+    item.activeVariant = next;
+    igRenderGrid();
+  });
+  thumb.addEventListener("pointerleave", () => { startX = null; });
+}
+
+function igOpenPreview(item) {
+  const active = item.variants[item.activeVariant];
+  if (active) openPreview(active.dataUrl);
+}
+
+function igUpdateErrorBanner() {
+  const banner = document.getElementById("igErrorBanner");
+  const failed = igState.items.filter(i => i.status === "error");
+  if (failed.length === 0) {
+    banner.classList.remove("visible");
+    banner.textContent = "";
+  } else {
+    banner.classList.add("visible");
+    banner.textContent = `Failed (${failed.length}): ${failed.map(f => f.name).join(", ")}`;
+  }
+}
+
+function igUpdateDownloadAllBtn() {
+  document.getElementById("igDownloadAllBtn").disabled = !igState.items.some(i => i.status === "done");
+}
+
+function igUpdateStatus(msg) {
+  document.getElementById("igStatus").textContent = msg || "";
+}
+
+/* ---------- generation flow ---------- */
+async function igRunBatch() {
+  const cfg = igReadConfig();
+  if (!cfg.prompt.trim()) return;
+
+  const editMode = cfg.mode === "edit" && igState.editImages.length > 0;
+
+  // One result card per source image in Edit mode, otherwise a single card.
+  if (editMode) {
+    igState.items = igState.editImages.map(img => ({
+      name: img.name.replace(/\.[^.]+$/, ""),
+      source: img,
+      status: "pending", loading: false,
+      variants: [], activeVariant: 0, total: cfg.variations
+    }));
+  } else {
+    igState.items = [{
+      name: "generation_1",
+      source: null,
+      status: "pending", loading: false,
+      variants: [], activeVariant: 0, total: cfg.variations
+    }];
+  }
+
+  igState.running = true;
+  document.getElementById("igStartBtn").disabled = true;
+  document.getElementById("igResetBtn").disabled = true;
+  igRenderGrid();
+  igUpdateErrorBanner();
+  igUpdateDownloadAllBtn();
+
+  let completed = 0;
+  const total = igState.items.length;
+  igUpdateStatus(`Generating 0 / ${total}...`);
+
+  const queue = igState.items.map((_, i) => i);
+  const workers = [];
+  for (let w = 0; w < CONCURRENCY; w++) {
+    workers.push((async () => {
+      while (queue.length > 0) {
+        const idx = queue.shift();
+        await igGenerateOne(idx, cfg);
+        completed++;
+        igUpdateStatus(`Generating ${completed} / ${total}...`);
+      }
+    })());
+  }
+  await Promise.all(workers);
+
+  igState.running = false;
+  document.getElementById("igResetBtn").disabled = false;
+  igRefreshStartBtn();
+  igUpdateStatus(`Done. ${igState.items.filter(i => i.status === "done").length} / ${total} succeeded.`);
+}
+
+/* Generate every variation of one card. Variations are independent requests
+   (see the strategy note above) so each one retries on its own and lands in
+   the UI as soon as it is ready. */
+async function igGenerateOne(idx, cfg) {
+  const item = igState.items[idx];
+  const onRateLimited = makeRateLimitHandler(item, igRenderGrid);
+  item.variants = [];
+  item.activeVariant = 0;
+  item.total = cfg.variations;
+
+  const results = [];
+  let lastError = null;
+  for (let v = 0; v < cfg.variations; v++) {
+    try {
+      const res = await callImageGen({
+        modelKey: cfg.model,
+        userPrompt: cfg.prompt,
+        mode: cfg.mode,
+        quality: cfg.quality,
+        aspect: cfg.aspect,
+        editImage: item.source,
+        refImage: igState.refImage,
+        onRateLimited
+      });
+      const cost = recordImageCost(cfg.model, cfg.quality, res.openaiSize);
+      results.push({ dataUrl: res.dataUrl, base64: res.base64, mime: res.mime, cost });
+      // Show progress as each variation completes.
+      item.variants = results.slice();
+      item.status = "done";
+      item.error = null;
+      igRenderGrid();
+    } catch (e) {
+      lastError = e.message || String(e);
+      console.warn(`[IG] variation ${v + 1}/${cfg.variations} failed:`, lastError);
+    }
+  }
+
+  if (results.length === 0) {
+    item.status = "error";
+    item.error = lastError || "unknown error";
+  } else {
+    item.status = "done";
+    item.total = results.length;
+    item.error = null;
+  }
+  item.retryInfo = null;
+  igRenderGrid();
+  igUpdateErrorBanner();
+  igUpdateDownloadAllBtn();
+}
+
+async function igRegenerate(idx) {
+  const cfg = igReadConfig();
+  const item = igState.items[idx];
+  if (!item || igState.running) return;
+  item.loading = true;
+  item.status = "pending";
+  item.downloaded = false;
+  item.regenerated = false;
+  igRenderGrid();
+  await igGenerateOne(idx, cfg);
+  item.loading = false;
+  if (item.status === "done") item.regenerated = true;
+  igRenderGrid();
+  igUpdateErrorBanner();
+  igUpdateDownloadAllBtn();
+}
+
+/* ---------- downloads ---------- */
+// name_1.png / name_2.png when a card holds several variations.
+function igVariantFilename(item, vIdx) {
+  const base = sanitizeFilename(item.name);
+  const ext = extFromMime(item.variants[vIdx].mime);
+  return item.variants.length > 1 ? `${base}_${vIdx + 1}.${ext}` : `${base}.${ext}`;
+}
+
+function igDownloadSingle(item) {
+  item.variants.forEach((v, i) => {
+    const a = document.createElement("a");
+    a.href = v.dataUrl;
+    a.download = igVariantFilename(item, i);
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  });
+  item.downloaded = true;
+  igRenderGrid();
+}
+
+async function igDownloadAll() {
+  const done = igState.items.filter(i => i.status === "done");
+  if (done.length === 0) return;
+  const zip = new JSZip();
+  for (const it of done) {
+    it.variants.forEach((v, i) => {
+      zip.file(igVariantFilename(it, i), v.base64, { base64: true });
+    });
+  }
+  const blob = await zip.generateAsync({ type: "blob" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "image_generator_output.zip";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+  done.forEach(it => { it.downloaded = true; });
+  igRenderGrid();
+}
+
+function igResetAll() {
+  igState.items = [];
+  igRenderGrid();
+  igUpdateErrorBanner();
+  igUpdateDownloadAllBtn();
+  igUpdateStatus("");
+}
+
+/* Quality options for the Image Generator's own model dropdown. */
+function igPopulateQualityDropdown(preserveValue) {
+  const sel = document.getElementById("igQuality");
+  const modelKey = document.getElementById("igModel").value;
+  const prev = preserveValue !== undefined ? preserveValue : sel.value;
+  sel.innerHTML = "";
+  const isIdeogram = modelKey === "ideogram_v3";
+  const options = isIdeogram
+    ? IDEOGRAM_QUALITY_OPTIONS
+    : [{ value: "1K", label: "1K" }, { value: "2K", label: "2K" }, { value: "4K", label: "4K" }];
+  const defaultValue = isIdeogram ? "DEFAULT" : "2K";
+  for (const opt of options) {
+    const o = document.createElement("option");
+    o.value = opt.value;
+    o.textContent = opt.label;
+    sel.appendChild(o);
+  }
+  sel.value = (prev && Array.from(sel.options).some(o => o.value === prev)) ? prev : defaultValue;
+}
+
+/* ===========================================================
    Wire up
    =========================================================== */
 document.getElementById("startBtn").addEventListener("click", runBatch);
@@ -2781,8 +4286,79 @@ document.addEventListener("click", (e) => {
   }
 });
 
+/* ---------- side menu + page routing ---------- */
+document.getElementById("menuToggle").addEventListener("click", (e) => {
+  e.stopPropagation();
+  toggleSideMenu();
+});
+document.getElementById("menuBackdrop").addEventListener("click", closeSideMenu);
+document.querySelectorAll(".side-menu .nav-item[data-page]").forEach(btn => {
+  btn.addEventListener("click", () => switchPage(btn.dataset.page));
+});
+
+/* ---------- settings dialog ---------- */
+document.getElementById("openSettingsBtn").addEventListener("click", openSettings);
+document.getElementById("settingsCloseBtn").addEventListener("click", closeSettings);
+document.getElementById("settingsCancelBtn").addEventListener("click", closeSettings);
+document.getElementById("settingsSaveBtn").addEventListener("click", saveSettings);
+document.getElementById("settingsModal").addEventListener("click", (e) => {
+  if (e.target.id === "settingsModal") closeSettings();
+});
+document.querySelectorAll(".key-edit-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const provider = btn.dataset.key;
+    settingsUnlocked[provider] = true;
+    renderSettingsFields();
+    const input = document.getElementById(SETTINGS_INPUT_IDS[provider]);
+    if (input) { input.focus(); input.select(); }
+  });
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "Escape") return;
+  if (document.getElementById("settingsModal").classList.contains("visible")) closeSettings();
+  else if (document.getElementById("sideMenu").classList.contains("open")) closeSideMenu();
+});
+
+/* ---------- Image Generator ---------- */
+document.getElementById("igStartBtn").addEventListener("click", igRunBatch);
+document.getElementById("igResetBtn").addEventListener("click", igResetAll);
+document.getElementById("igDownloadAllBtn").addEventListener("click", igDownloadAll);
+document.getElementById("igCostReset").addEventListener("click", resetCostCounter);
+document.getElementById("igBalanceAmount").addEventListener("click", promptSetBalance);
+document.getElementById("igSaveConfigBtn").addEventListener("click", openSaveModal);
+
+document.getElementById("igPrompt").addEventListener("input", igRefreshStartBtn);
+document.getElementById("igMode").addEventListener("change", igRefreshModeUI);
+document.getElementById("igModel").addEventListener("change", () => igPopulateQualityDropdown());
+
+document.getElementById("igAddEditBtn").addEventListener("click", () => {
+  document.getElementById("igEditFileInput").click();
+});
+document.getElementById("igAddRefBtn").addEventListener("click", () => {
+  document.getElementById("igRefFileInput").click();
+});
+document.getElementById("igEditFileInput").addEventListener("change", async (e) => {
+  await igHandleEditFiles(e.target.files);
+  e.target.value = "";
+});
+document.getElementById("igRefFileInput").addEventListener("change", async (e) => {
+  await igHandleRefFile(e.target.files);
+  e.target.value = "";
+});
+
+["igPrompt","igModel","igQuality","igVariations","igMode"].forEach(id => {
+  const el = document.getElementById(id);
+  el.addEventListener("input", refreshSaveConfigStatus);
+  el.addEventListener("change", refreshSaveConfigStatus);
+});
+
+/* ---------- initial render ---------- */
 populateAspectDropdown(CUSTOM_RATIO_DEFAULT);
 populateQualityDropdown();
+igPopulateQualityDropdown();
+igRefreshModeUI();
+igRefreshStartBtn();
+igRenderGrid();
 renderConfigsMenu();
 refreshStartBtn();
 refreshSaveConfigStatus();
@@ -2791,13 +4367,20 @@ loadCostState();
 updateCostCounter();
 updateBalanceDisplay();
 
+// First run with no keys stored yet: open Settings so the user knows where
+// to put them instead of hitting a wall of 401s on the first generation.
+if (API_KEY_PROVIDERS.every(p => !getApiKey(p))) {
+  setTimeout(openSettings, 350);
+}
+
 /* ===========================================================
    Warn before closing the tab if there are generated images
    that have not been downloaded yet.
    =========================================================== */
 function hasUndownloadedImages() {
-  return Array.isArray(state.items)
-    && state.items.some(i => i && i.status === "done" && !i.downloaded);
+  const pending = (arr) => Array.isArray(arr)
+    && arr.some(i => i && i.status === "done" && !i.downloaded);
+  return pending(state.items) || pending(igState.items);
 }
 window.addEventListener("beforeunload", (e) => {
   if (hasUndownloadedImages()) {
