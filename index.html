@@ -643,13 +643,14 @@
     align-items: center;
     justify-content: center;
     z-index: 1000;
-    padding: 30px;
+    padding: 12px;
     cursor: zoom-out;
   }
   .preview-modal.visible { display: flex; }
-  /* The stage clips the scaled image so zooming never spills over the modal. */
+  /* The stage clips the scaled image so zooming never spills over the modal.
+     Sized 91vw/91vh — 30% larger than the original 70vw/70vh canvas. */
   .preview-stage {
-    width: 70vw; height: 70vh;
+    width: 91vw; height: 91vh;
     overflow: hidden;
     background: #fff;
     border-radius: 6px;
@@ -687,12 +688,12 @@
     position: absolute;
     top: 50%;
     transform: translateY(-50%);
-    width: 52px; height: 52px;
+    width: 46px; height: 46px;
     border-radius: 50%;
     border: none;
     background: rgba(255,255,255,0.9);
     color: #111827;
-    font-size: 30px;
+    font-size: 27px;
     line-height: 1;
     font-weight: 400;
     cursor: pointer;
@@ -705,8 +706,10 @@
   }
   .preview-nav:hover { background: #fff; }
   .preview-nav:disabled { opacity: 0.3; cursor: default; }
-  .preview-nav.prev { left: 26px; }
-  .preview-nav.next { right: 26px; }
+  /* Sit in the narrow gutter beside the enlarged stage; on small screens they
+     simply overlay the image edge, which is normal lightbox behaviour. */
+  .preview-nav.prev { left: 10px; }
+  .preview-nav.next { right: 10px; }
   .preview-modal.has-nav .preview-nav { display: flex; }
   .preview-counter {
     position: absolute;
@@ -1283,6 +1286,14 @@
       </div>
     </div>
 
+    <div class="settings-field">
+      <label for="keyIdeogramProxy">Ideogram Proxy URL <span style="font-weight:400;font-size:14px;opacity:.75;">— optional</span></label>
+      <div class="settings-row">
+        <input type="text" id="keyIdeogramProxy" spellcheck="false" autocomplete="off" placeholder="https://your-worker.workers.dev  (leave blank to use http://localhost:8787)" />
+      </div>
+      <p class="settings-hint" style="margin-top:7px;">Ideogram's API blocks direct browser calls, so it must go through a proxy. Locally, leave this blank and run <code>python3 cors-proxy.py</code>. To make Ideogram work on the published site, deploy <code>cloudflare-worker.js</code> (free) and paste its URL here — setup steps are in that file.</p>
+    </div>
+
     <p class="settings-hint">Keys are stored only in this browser's local storage — they are never written into the page source or sent anywhere except the matching provider's API.</p>
 
     <div class="settings-actions">
@@ -1444,11 +1455,52 @@ const OPENAI_QUALITY_MAP = { "1K": "low", "2K": "medium", "4K": "high" };
 // the CORS header on the way back. If the proxy isn't running the code below
 // catches the fetch error and shows a friendly "start the proxy" message
 // instead of the raw browser error.
-const IDEOGRAM_PROXY_BASE = "http://localhost:8787";
 const IDEOGRAM_UPSTREAM = "https://api.ideogram.ai/v1/ideogram-v3/generate";
 const IDEOGRAM_REMIX_UPSTREAM = "https://api.ideogram.ai/v1/ideogram-v3/remix";
-const IDEOGRAM_API_BASE = `${IDEOGRAM_PROXY_BASE}/proxy?url=${encodeURIComponent(IDEOGRAM_UPSTREAM)}`;
-const IDEOGRAM_REMIX_API_BASE = `${IDEOGRAM_PROXY_BASE}/proxy?url=${encodeURIComponent(IDEOGRAM_REMIX_UPSTREAM)}`;
+
+/* Which proxy to route Ideogram through.
+
+   Locally, cors-proxy.py on port 8787 is the default. Once the page is
+   served from a real host (GitHub Pages) that localhost address no longer
+   exists for visitors, so a hosted proxy URL can be set in Settings —
+   deploy cloudflare-worker.js and paste its URL there. A saved value always
+   wins; otherwise we fall back to localhost, which only makes sense when the
+   page itself is being opened locally. */
+const IDEOGRAM_LOCAL_PROXY = "http://localhost:8787";
+
+function isLocalPage() {
+  const h = location.hostname;
+  return location.protocol === "file:" || h === "localhost" || h === "127.0.0.1" || h === "";
+}
+
+function getIdeogramProxyBase() {
+  const saved = (loadApiKeys().ideogramProxy || "").trim();
+  if (saved) return saved.replace(/\/+$/, "");
+  return IDEOGRAM_LOCAL_PROXY;
+}
+
+function ideogramProxied(upstreamUrl) {
+  return `${getIdeogramProxyBase()}/proxy?url=${encodeURIComponent(upstreamUrl)}`;
+}
+
+/* The right remedy depends on how the page is being served, so the message
+   points at the local script or at the hosted Worker accordingly. */
+function ideogramProxyErrorMessage() {
+  const base = getIdeogramProxyBase();
+  const usingLocal = base === IDEOGRAM_LOCAL_PROXY;
+  if (usingLocal && isLocalPage()) {
+    return `Cannot reach the Ideogram proxy at ${base}. Start it by running "python3 cors-proxy.py" ` +
+           `from the Website_drawing folder, then try again.`;
+  }
+  if (usingLocal) {
+    return `Ideogram needs a hosted proxy when this page is served from ${location.origin}. ` +
+           `Deploy cloudflare-worker.js (free) and paste its URL into Settings → Ideogram Proxy URL. ` +
+           `Setup steps are in the comments at the top of that file.`;
+  }
+  return `Cannot reach the Ideogram proxy at ${base}. Check that the URL in Settings → Ideogram Proxy URL ` +
+         `is correct and that the Worker is deployed — opening that URL in a browser tab should say ` +
+         `"Ideogram CORS proxy is running."`;
+}
 // Map UI colon ratios → Ideogram v3 API "x"-style enum values.
 const IDEOGRAM_RATIO_TO_API = {
   "1:1":   "1x1",
@@ -2515,7 +2567,7 @@ async function callIdeogramImage(modelKey, tpl, vars, subject, selectedRatio, qu
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 180000);
     try {
-      resp = await fetch(IDEOGRAM_API_BASE, {
+      resp = await fetch(ideogramProxied(IDEOGRAM_UPSTREAM), {
         method: "POST",
         headers: { "Api-Key": ideogramKey },
         body: buildForm(),
@@ -2529,10 +2581,7 @@ async function callIdeogramImage(modelKey, tpl, vars, subject, selectedRatio, qu
       // Most common cause: the local CORS proxy isn't running. Rewrite the
       // browser's cryptic "TypeError: Failed to fetch" into a clear message.
       if (String(e.message || "").toLowerCase().includes("failed to fetch")) {
-        throw new Error(
-          "Cannot reach the CORS proxy at " + IDEOGRAM_PROXY_BASE +
-          '. Start it by running "python3 cors-proxy.py" from the Website_drawing folder, then try again.'
-        );
+        throw new Error(ideogramProxyErrorMessage());
       }
       throw e;
     }
@@ -2566,7 +2615,7 @@ async function callIdeogramImage(modelKey, tpl, vars, subject, selectedRatio, qu
   // arrives with the CORS header. Inline as a data URL so the rest of the
   // pipeline (preview, ZIP download, regenerate, dimensions badge) works
   // exactly like the Gemini and OpenAI paths.
-  const proxiedImgUrl = `${IDEOGRAM_PROXY_BASE}/proxy?url=${encodeURIComponent(item.url)}`;
+  const proxiedImgUrl = ideogramProxied(item.url);
   const imgResp = await fetch(proxiedImgUrl, { cache: "no-store" });
   if (!imgResp.ok) throw new Error(`Failed to fetch image URL: HTTP ${imgResp.status}`);
   const blob = await imgResp.blob();
@@ -2889,7 +2938,7 @@ async function igCallIdeogram(modelKey, prompt, selectedRatio, quality, images, 
   // images[0] = image to edit (remix), images[1] = optional style reference.
   const editImg = images[0] || null;
   const refImg = images[1] || null;
-  const endpoint = editImg ? IDEOGRAM_REMIX_API_BASE : IDEOGRAM_API_BASE;
+  const endpoint = ideogramProxied(editImg ? IDEOGRAM_REMIX_UPSTREAM : IDEOGRAM_UPSTREAM);
 
   function buildForm() {
     const form = new FormData();
@@ -2923,10 +2972,7 @@ async function igCallIdeogram(modelKey, prompt, selectedRatio, quality, images, 
       clearTimeout(timeoutId);
       if (e.name === "AbortError") throw new Error("Request timed out after 180s");
       if (String(e.message || "").toLowerCase().includes("failed to fetch")) {
-        throw new Error(
-          "Cannot reach the CORS proxy at " + IDEOGRAM_PROXY_BASE +
-          '. Start it by running "python3 cors-proxy.py" from the Website_drawing folder, then try again.'
-        );
+        throw new Error(ideogramProxyErrorMessage());
       }
       throw e;
     }
@@ -2952,7 +2998,7 @@ async function igCallIdeogram(modelKey, prompt, selectedRatio, quality, images, 
   const data = await resp.json();
   const item = data?.data?.[0];
   if (!item?.url) throw new Error("No image URL in Ideogram response");
-  const proxied = `${IDEOGRAM_PROXY_BASE}/proxy?url=${encodeURIComponent(item.url)}`;
+  const proxied = ideogramProxied(item.url);
   const imgResp = await fetch(proxied, { cache: "no-store" });
   if (!imgResp.ok) throw new Error(`Failed to fetch image URL: HTTP ${imgResp.status}`);
   const out = await blobToDataUrl(await imgResp.blob());
@@ -3195,8 +3241,9 @@ function renderGrid() {
       const img = document.createElement("img");
       img.src = item.dataUrl;
       img.alt = item.subject;
-      // Preview is reached through the Preview button only.
-      img.style.cursor = "default";
+      img.style.cursor = "zoom-in";
+      img.title = "Click to preview";
+      img.addEventListener("click", () => openPreview(item.dataUrl));
       thumb.appendChild(img);
       const dimBadge = document.createElement("div");
       dimBadge.className = "dim-badge";
@@ -3438,13 +3485,14 @@ async function downloadAll() {
 let previewCtx = null; // { urls: string[], index: number }
 
 /* Click-to-zoom: each click steps 0 -> 1 -> 2 -> back to 0.
-   Every step magnifies by 30% on top of the previous one. */
-const PREVIEW_ZOOM_STEP = 1.3;
-const PREVIEW_ZOOM_MAX_STEP = 2;
+   First click enlarges by 40% (1.40x), the second adds a further 50% on top
+   of that (1.40 x 1.50 = 2.10x), the third returns to the original size. */
+const PREVIEW_ZOOM_SCALES = [1, 1.4, 2.1];
+const PREVIEW_ZOOM_MAX_STEP = PREVIEW_ZOOM_SCALES.length - 1;
 let previewZoomStep = 0;
 
 function previewScale() {
-  return Math.pow(PREVIEW_ZOOM_STEP, previewZoomStep);
+  return PREVIEW_ZOOM_SCALES[previewZoomStep] || 1;
 }
 
 function openPreview(dataUrl) {
@@ -4058,6 +4106,9 @@ function maskApiKey(key) {
 
 function renderSettingsFields() {
   const keys = loadApiKeys();
+  // The proxy URL is not a secret, so it is shown in full and always editable.
+  const proxyInput = document.getElementById("keyIdeogramProxy");
+  if (proxyInput) proxyInput.value = keys.ideogramProxy || "";
   for (const provider of API_KEY_PROVIDERS) {
     const input = document.getElementById(SETTINGS_INPUT_IDS[provider]);
     const editBtn = document.querySelector(`.key-edit-btn[data-key="${provider}"]`);
@@ -4092,6 +4143,12 @@ function closeSettings() {
 
 function saveSettings() {
   const keys = loadApiKeys();
+  const proxyInput = document.getElementById("keyIdeogramProxy");
+  if (proxyInput) {
+    const v = proxyInput.value.trim().replace(/\/+$/, "");
+    if (v) keys.ideogramProxy = v;
+    else delete keys.ideogramProxy; // blank => fall back to localhost
+  }
   for (const provider of API_KEY_PROVIDERS) {
     const input = document.getElementById(SETTINGS_INPUT_IDS[provider]);
     if (!input || input.disabled) continue; // locked + masked => leave untouched
@@ -4151,6 +4208,19 @@ function switchPage(page) {
    IMAGE GENERATOR — state & UI
    =========================================================== */
 const IG_MAX_EDIT_IMAGES = 20;
+
+/* Short model names used when naming freshly generated images:
+   gen_<Model>_<n>  ->  gen_NanoBananaPro_1, gen_GPT_1, gen_Ideogram_1 */
+const IG_MODEL_SLUG = {
+  pro: "NanoBananaPro",
+  v2: "NanoBanana2",
+  openai_image_2: "GPT",
+  ideogram_v3: "Ideogram"
+};
+
+function igModelSlug(modelKey) {
+  return IG_MODEL_SLUG[modelKey] || String(modelKey || "Model");
+}
 
 const igState = {
   items: [],        // { name, status, variants:[{dataUrl,base64,mime,cost}], activeVariant, ... }
@@ -4348,8 +4418,14 @@ function igRenderGrid() {
       const img = document.createElement("img");
       img.src = active.dataUrl;
       img.alt = item.name;
-      // Preview is reached through the Preview button only.
-      img.style.cursor = item.total > 1 ? "grab" : "default";
+      img.style.cursor = "zoom-in";
+      img.title = "Click to preview";
+      // The ‹ › buttons sit on top of the image and stop propagation, so this
+      // only fires for clicks on the picture itself.
+      img.addEventListener("click", () => {
+        if (igSwipeJustHappened) return;
+        igOpenPreview(item);
+      });
       thumb.appendChild(img);
 
       // ‹ › step through variations in place
@@ -4438,6 +4514,10 @@ function igRenderGrid() {
   });
 }
 
+// Set briefly after a swipe so the click that follows the drag does not also
+// open the preview.
+let igSwipeJustHappened = false;
+
 // Pointer/touch drag on the thumb steps through variations.
 function igAttachSwipe(thumb, item) {
   let startX = null;
@@ -4450,6 +4530,8 @@ function igAttachSwipe(thumb, item) {
     const dir = dx < 0 ? 1 : -1;
     const next = item.activeVariant + dir;
     if (next < 0 || next >= item.total) return;
+    igSwipeJustHappened = true;
+    setTimeout(() => { igSwipeJustHappened = false; }, 250);
     item.activeVariant = next;
     igRenderGrid();
   });
@@ -4499,8 +4581,9 @@ async function igRunBatch() {
       variants: [], activeVariant: 0, total: cfg.variations
     }));
   } else {
+    // Fresh generations are named after the model: gen_<Model>_<n>
     igState.items = [{
-      name: "generation_1",
+      name: `gen_${igModelSlug(cfg.model)}_1`,
       source: null,
       status: "pending", loading: false,
       variants: [], activeVariant: 0, total: cfg.variations
@@ -4593,6 +4676,13 @@ async function igRegenerate(idx) {
   const cfg = igReadConfig();
   const item = igState.items[idx];
   if (!item || igState.running) return;
+  // A fresh generation is named after the model that produced it, so if the
+  // model was switched before regenerating, the name follows. Edit-mode cards
+  // keep their source file name.
+  if (!item.source) {
+    const n = item.name.match(/_(\d+)$/);
+    item.name = `gen_${igModelSlug(cfg.model)}_${n ? n[1] : 1}`;
+  }
   item.loading = true;
   item.status = "pending";
   item.downloaded = false;
@@ -4607,11 +4697,12 @@ async function igRegenerate(idx) {
 }
 
 /* ---------- downloads ---------- */
-// name_1.png / name_2.png when a card holds several variations.
+/* The first variation keeps the card's name; further variations append
+   -2, -3, ...  e.g.  gen_GPT_1.png, gen_GPT_1-2.png, gen_GPT_1-3.png */
 function igVariantFilename(item, vIdx) {
   const base = sanitizeFilename(item.name);
   const ext = extFromMime(item.variants[vIdx].mime);
-  return item.variants.length > 1 ? `${base}_${vIdx + 1}.${ext}` : `${base}.${ext}`;
+  return vIdx === 0 ? `${base}.${ext}` : `${base}-${vIdx + 1}.${ext}`;
 }
 
 function igDownloadSingle(item) {
