@@ -647,7 +647,80 @@
     cursor: zoom-out;
   }
   .preview-modal.visible { display: flex; }
-  .preview-modal img { width: 70vw; height: 70vh; max-width: 70vw; max-height: 70vh; object-fit: contain; background: #fff; border-radius: 6px; }
+  /* The stage clips the scaled image so zooming never spills over the modal. */
+  .preview-stage {
+    width: 70vw; height: 70vh;
+    overflow: hidden;
+    background: #fff;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: zoom-in;
+  }
+  .preview-stage.at-max { cursor: zoom-out; }
+  .preview-modal img {
+    width: 100%; height: 100%;
+    object-fit: contain;
+    display: block;
+    transform: scale(1);
+    transition: transform 0.16s ease-out;
+    will-change: transform;
+  }
+  /* While panning, follow the cursor immediately instead of easing. */
+  .preview-stage.panning img { transition: none; }
+  .preview-zoom-badge {
+    position: absolute;
+    top: 26px; left: 50%;
+    transform: translateX(-50%);
+    background: rgba(17,24,39,0.85);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 4px 12px;
+    border-radius: 20px;
+    display: none;
+    pointer-events: none;
+  }
+  .preview-zoom-badge.visible { display: block; }
+  .preview-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 52px; height: 52px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(255,255,255,0.9);
+    color: #111827;
+    font-size: 30px;
+    line-height: 1;
+    font-weight: 400;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    font-family: inherit;
+    padding: 0 0 4px 0;
+    z-index: 2;
+  }
+  .preview-nav:hover { background: #fff; }
+  .preview-nav:disabled { opacity: 0.3; cursor: default; }
+  .preview-nav.prev { left: 26px; }
+  .preview-nav.next { right: 26px; }
+  .preview-modal.has-nav .preview-nav { display: flex; }
+  .preview-counter {
+    position: absolute;
+    bottom: 26px; left: 50%;
+    transform: translateX(-50%);
+    background: rgba(17,24,39,0.85);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 5px 14px;
+    border-radius: 20px;
+    display: none;
+  }
+  .preview-modal.has-nav .preview-counter { display: block; }
   .empty-state {
     text-align: center;
     padding: 40px;
@@ -707,55 +780,66 @@
   .ig-strip-side { display: flex; align-items: flex-start; gap: 8px; min-width: 0; }
   .ig-strip-side.edit-side { flex: 1; min-width: 0; }
   .ig-add-btn {
-    width: 34px; height: 34px;
+    height: 34px;
+    padding: 0 13px;
     flex-shrink: 0;
     border: none;
     border-radius: 7px;
     color: #fff;
-    font-size: 21px;
+    font-size: 13px;
+    font-weight: 600;
     line-height: 1;
-    font-weight: 400;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
+    gap: 5px;
+    white-space: nowrap;
     font-family: inherit;
   }
+  .ig-add-btn .plus { font-size: 17px; font-weight: 400; line-height: 1; }
   .ig-add-btn.blue { background: #2563eb; }
   .ig-add-btn.orange { background: #f97316; }
   .ig-add-btn:disabled { background: #9ca3af; cursor: not-allowed; opacity: 0.65; }
   .ig-thumbs {
     display: flex;
-    gap: 8px;
+    gap: 12px;
     overflow-x: auto;
-    overflow-y: hidden;
-    padding: 2px 2px 6px;
-    min-height: 42px;
+    overflow-y: visible;
+    /* generous top/left padding so the protruding ✕ is never clipped */
+    padding: 11px 4px 6px 11px;
+    min-height: 55px;
     flex: 1;
     min-width: 0;
     scrollbar-width: thin;
   }
   .ig-thumbs::-webkit-scrollbar { height: 7px; }
   .ig-thumbs::-webkit-scrollbar-thumb { background: #9ca3af; border-radius: 4px; }
+  /* wrapper carries the ✕ and must NOT clip it */
   .ig-thumb {
     position: relative;
-    width: 42px; height: 42px;
+    width: 55px; height: 55px;
     flex-shrink: 0;
-    border-radius: 7px;
+  }
+  /* inner box does the clipping/rounding of the picture itself */
+  .ig-thumb .ig-thumb-inner {
+    width: 100%; height: 100%;
+    border-radius: 8px;
     overflow: hidden;
-    border: 1px solid #9ca3af;
+    border: 2px solid #111827;
     background: #fff;
+    cursor: zoom-in;
   }
   .ig-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .ig-thumb .ig-thumb-x {
     position: absolute;
-    top: -5px; left: -5px;
-    width: 17px; height: 17px;
-    border-radius: 4px;
-    background: #111827;
+    top: -11px; left: -11px;
+    width: 23px; height: 23px;
+    border-radius: 6px;
+    background: #3f3f46;
     color: #fff;
     border: none;
-    font-size: 11px;
+    font-size: 14px;
     line-height: 1;
     cursor: pointer;
     display: flex;
@@ -763,8 +847,94 @@
     justify-content: center;
     padding: 0;
     font-family: inherit;
+    z-index: 2;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
   }
   .ig-thumb .ig-thumb-x:hover { background: #b91c1c; }
+
+  /* info icon + hover bubble above the prompt box */
+  .ig-prompt-head {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 4px 0 16px;
+  }
+  .ig-info {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    background: #9ca3af;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+    font-style: italic;
+    font-family: Georgia, "Times New Roman", serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: help;
+    user-select: none;
+  }
+  .ig-info:hover { background: #6b7280; }
+  .ig-info .ig-info-bubble {
+    display: none;
+    position: absolute;
+    top: calc(100% + 10px);
+    left: 0;
+    width: 430px;
+    max-width: 78vw;
+    background: #fef9c3;
+    border: 1px solid #eab308;
+    border-radius: 10px;
+    padding: 13px 15px;
+    font-size: 12px;
+    font-style: normal;
+    font-weight: 400;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: #422006;
+    line-height: 1.6;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.18);
+    z-index: 60;
+    text-align: left;
+    cursor: default;
+  }
+  /* hover is the primary trigger; focus/pinned also work for keyboard + touch */
+  .ig-info:hover .ig-info-bubble,
+  .ig-info:focus .ig-info-bubble,
+  .ig-info.pinned .ig-info-bubble { display: block; }
+  .ig-info .ig-info-bubble strong { font-weight: 700; }
+  .ig-info .ig-info-bubble ul { margin: 6px 0 0; padding-left: 17px; }
+  .ig-info .ig-info-bubble li { margin-bottom: 5px; }
+
+  /* prev/next arrows inside a result card */
+  .card .thumb .card-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(255,255,255,0.92);
+    color: #111827;
+    font-size: 19px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 0 3px 0;
+    font-family: inherit;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+    z-index: 3;
+  }
+  .card .thumb .card-nav:hover { background: #fff; }
+  .card .thumb .card-nav:disabled { opacity: 0.32; cursor: default; }
+  .card .thumb .card-nav.prev { left: 7px; }
+  .card .thumb .card-nav.next { right: 7px; }
   .ig-count-hint {
     font-size: 11px;
     color: #4b5563;
@@ -775,8 +945,8 @@
 
   .ig-fields {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 18px;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 14px;
     margin-top: 22px;
   }
   .ig-fields .field label { font-size: 15px; font-weight: 500; color: #1f2937; }
@@ -821,11 +991,15 @@
   }
   .card .thumb.swipeable img { cursor: grab; }
 
+  @media (max-width: 1100px) {
+    .ig-fields { grid-template-columns: repeat(3, 1fr); }
+  }
   @media (max-width: 900px) {
     .ig-fields { grid-template-columns: repeat(2, 1fr); }
   }
   @media (max-width: 560px) {
     .ig-fields { grid-template-columns: 1fr; }
+    .ig-strip-row { flex-direction: column; }
   }
 </style>
 </head>
@@ -834,8 +1008,8 @@
 <div id="menuBackdrop" class="menu-backdrop"></div>
 <nav id="sideMenu" class="side-menu">
   <div class="menu-title">MENU</div>
-  <button type="button" class="nav-item active-draw" data-page="draw"><span class="nav-ico">✏️</span>How to Draw</button>
-  <button type="button" class="nav-item" data-page="imagegen"><span class="nav-ico">🖼️</span>Image Gen</button>
+  <button type="button" class="nav-item" data-page="draw"><span class="nav-ico">✏️</span>How to Draw</button>
+  <button type="button" class="nav-item active-imagegen" data-page="imagegen"><span class="nav-ico">🖼️</span>Image Gen</button>
   <div class="nav-spacer"></div>
   <button type="button" class="nav-item settings-item" id="openSettingsBtn"><span class="nav-ico">⚙️</span>Settings</button>
 </nav>
@@ -843,7 +1017,7 @@
 <header>
   <div class="header-left">
     <button type="button" id="menuToggle" class="menu-toggle" title="Toggle menu">☰</button>
-    <span id="headerTitle">How To Draw — Bulk Worksheet Generator <span class="version-tag">V3</span></span>
+    <span id="headerTitle">Image Generator <span class="version-tag">V3</span></span>
   </div>
   <div id="configsWrap" class="configs-wrap">
     <button id="configsBtn" class="configs-btn" type="button">Configs ▾</button>
@@ -852,7 +1026,7 @@
 </header>
 
 <main>
-<div id="page-draw" class="page active">
+<div id="page-draw" class="page">
   <div class="section">
     <h2>Data</h2>
     <div class="grid-fields">
@@ -977,21 +1151,37 @@
   </div>
 </div><!-- /page-draw -->
 
-<div id="page-imagegen" class="page">
+<div id="page-imagegen" class="page active">
   <div class="section">
     <div class="ig-panel">
-      <h2>Prompt</h2>
+      <div class="ig-prompt-head">
+        <span class="ig-info" tabindex="0" aria-label="How your prompt is used">i
+          <span class="ig-info-bubble">
+            <strong>How your input is turned into the final request</strong>
+            <ul>
+              <li>Your text is never sent raw. It is wrapped into a structured prompt rebuilt for the selected <strong>Drawing Model</strong>, with your words kept as the core instruction.</li>
+              <li><strong>Generation Mode = New</strong> asks for an original image. <strong>Edit</strong> asks the model to recreate each attached image while keeping its subject and composition recognisable.</li>
+              <li><strong>Images to edit</strong> (blue button, up to 20) are sent <em>one request per image</em>, so each one gets its own result box. Their file names are named in the prompt.</li>
+              <li>The <strong>Reference image</strong> (orange button, max 1) is described as a style guide only — its colours, technique and look are copied, not its subject.</li>
+              <li><strong>Aspect Ratio</strong> is applied as the authoritative output shape and <em>overrides any ratio you typed</em> in the text.</li>
+              <li><strong>Generation per image</strong> sends that many independent requests, so variations differ genuinely. Browse them with the ‹ › arrows on the result.</li>
+              <li><strong>Quality</strong> maps to each provider's own tier (1K/2K/4K, or Turbo/Default/Quality for Ideogram) and drives the per-image cost.</li>
+            </ul>
+          </span>
+        </span>
+        <h2>Prompt</h2>
+      </div>
       <textarea id="igPrompt" placeholder="Like: cute lion, angry dog, small table"></textarea>
 
       <div class="ig-strip-row">
         <div class="ig-strip-side edit-side">
-          <button type="button" id="igAddEditBtn" class="ig-add-btn blue" title="Add images to edit (Edit mode only, up to 20)">+</button>
+          <button type="button" id="igAddEditBtn" class="ig-add-btn blue" title="Add images to edit (Edit mode only, up to 20)"><span class="plus">+</span>Images to edit</button>
           <div id="igEditThumbs" class="ig-thumbs"></div>
           <span id="igEditCount" class="ig-count-hint"></span>
         </div>
         <div class="ig-strip-side">
           <div id="igRefThumbs" class="ig-thumbs" style="flex:0 0 auto;"></div>
-          <button type="button" id="igAddRefBtn" class="ig-add-btn orange" title="Add one reference image">+</button>
+          <button type="button" id="igAddRefBtn" class="ig-add-btn orange" title="Add one reference image"><span class="plus">+</span>Reference image</button>
         </div>
       </div>
 
@@ -1011,6 +1201,10 @@
         <div class="field">
           <label for="igQuality">Quality:</label>
           <select id="igQuality"></select>
+        </div>
+        <div class="field">
+          <label for="igAspect">Aspect Ratio:</label>
+          <select id="igAspect"></select>
         </div>
         <div class="field">
           <label for="igVariations">Generation per image:</label>
@@ -1098,7 +1292,13 @@
   </div>
 </div>
 
-<div id="previewModal" class="preview-modal"><img id="previewImg" alt="" /></div>
+<div id="previewModal" class="preview-modal">
+  <button type="button" id="previewPrev" class="preview-nav prev" title="Previous">&#8249;</button>
+  <div id="previewStage" class="preview-stage"><img id="previewImg" alt="" /></div>
+  <button type="button" id="previewNext" class="preview-nav next" title="Next">&#8250;</button>
+  <div id="previewCounter" class="preview-counter"></div>
+  <div id="previewZoomBadge" class="preview-zoom-badge"></div>
+</div>
 
 <div id="saveModal" class="save-modal">
   <div class="save-box">
@@ -1187,6 +1387,38 @@ const SUPPORTED_RATIOS = {
   // the API call). We surface them all in the dropdown.
   ideogram_v3: ["1:1", "2:3", "3:2", "3:4", "4:3", "9:16", "16:9", "10:16", "16:10"]
 };
+
+/* Image Generator custom ratio.
+
+   17:22 matches US Letter (8.5 x 11 in) page proportions. No provider
+   accepts it as an API enum value, so it behaves like the How-to-Draw
+   page's 333:215: the PROMPT states 17:22 (that is what shapes the
+   picture), while the API call is sent with the nearest ratio each
+   backend actually supports. */
+const IG_CUSTOM_RATIO = "17:22";
+const IG_CUSTOM_RATIO_LABEL = "17:22 (8.5x11)";
+
+function ratioToNumber(r) {
+  const [w, h] = String(r).split(":").map(Number);
+  return (w > 0 && h > 0) ? w / h : NaN;
+}
+
+/* Pick the supported ratio closest in shape to `target`. Falling back to a
+   fixed 3:2 would flip a portrait request to landscape, so match on the
+   actual w/h value instead. */
+function nearestSupportedRatio(target, supportedList, fallback) {
+  const t = ratioToNumber(target);
+  const list = (supportedList || []).filter(r => Number.isFinite(ratioToNumber(r)));
+  if (!Number.isFinite(t) || list.length === 0) return fallback;
+  if (list.includes(target)) return target;
+  let best = list[0], bestDiff = Infinity;
+  for (const r of list) {
+    // compare in log space so 2:1 and 1:2 are treated as equally far from 1:1
+    const diff = Math.abs(Math.log(ratioToNumber(r)) - Math.log(t));
+    if (diff < bestDiff) { bestDiff = diff; best = r; }
+  }
+  return best;
+}
 
 // Map UI aspect ratio → OpenAI gpt-image-2 size string (W x H in pixels).
 const OPENAI_RATIO_TO_SIZE = {
@@ -1894,7 +2126,7 @@ function buildOpenAIPrompt(template, vars, subject) {
 async function callGeminiImage(modelKey, staticText, dynamicText, selectedRatio, quality, onRateLimited) {
   const modelId = MODEL_MAP[modelKey];
   const supported = SUPPORTED_RATIOS[modelKey] || [];
-  const apiRatio = supported.includes(selectedRatio) ? selectedRatio : API_FALLBACK_RATIO;
+  const apiRatio = nearestSupportedRatio(selectedRatio, supported, API_FALLBACK_RATIO);
   const imageSize = ["1K", "2K", "4K"].includes(quality) ? quality : "2K";
   console.log("[Gemini request]", { model: modelId, aspectRatio: apiRatio, imageSize: imageSize });
   const url = `${API_BASE}${modelId}:generateContent?key=${encodeURIComponent(requireApiKey("gemini"))}`;
@@ -2015,7 +2247,7 @@ function isRetriableApiError(status, bodyText) {
 
 async function callOpenAIImage(modelKey, tpl, vars, subject, selectedRatio, quality, onRateLimited) {
   const modelId = MODEL_MAP[modelKey];
-  const apiRatio = OPENAI_RATIO_TO_SIZE[selectedRatio] ? selectedRatio : "3:2";
+  const apiRatio = nearestSupportedRatio(selectedRatio, Object.keys(OPENAI_RATIO_TO_SIZE), "3:2");
   const size = OPENAI_RATIO_TO_SIZE[apiRatio];
   const oaQuality = OPENAI_QUALITY_MAP[quality] || "medium";
   const fullPrompt = buildOpenAIPrompt(tpl, vars, subject);
@@ -2249,7 +2481,9 @@ function buildIdeogramPrompt(tpl, vars, subject) {
    =========================================================== */
 async function callIdeogramImage(modelKey, tpl, vars, subject, selectedRatio, quality, onRateLimited) {
   const modelId = MODEL_MAP[modelKey];
-  const apiRatio = IDEOGRAM_RATIO_TO_API[selectedRatio] || IDEOGRAM_RATIO_TO_API["3:2"];
+  const apiRatio = IDEOGRAM_RATIO_TO_API[
+    nearestSupportedRatio(selectedRatio, Object.keys(IDEOGRAM_RATIO_TO_API), "3:2")
+  ];
   const renderingSpeed = ["TURBO", "DEFAULT", "QUALITY"].includes(quality) ? quality : "DEFAULT";
   // NOTE: Ideogram is a descriptive image generator, so we do NOT reuse
   // buildOpenAIPrompt here. Instead we build a compact, layout-first
@@ -2422,8 +2656,28 @@ async function blobToDataUrl(blob) {
 /* Build the natural-language prompt actually sent to the model.
    It folds in the generation mode plus the names of the edit / reference
    images so the model knows what role each attached picture plays. */
+// Words/patterns a user might type to request a shape. Used only to detect
+// that the typed text contains a competing instruction, so the prompt can
+// say explicitly which one wins.
+const ASPECT_MENTION_RE = /\b(\d{1,2}\s*[:x×]\s*\d{1,2}|aspect\s*ratio|square|portrait|landscape|widescreen|vertical|horizontal|panoramic)\b/i;
+
+// Plain-English gloss so the model reads the ratio, not just the digits.
+function describeAspect(ratio) {
+  const named = {
+    "1:1": "a perfect square", "2:3": "tall portrait", "3:2": "wide landscape",
+    "3:4": "tall portrait", "4:3": "wide landscape", "4:5": "tall portrait",
+    "5:4": "wide landscape", "9:16": "tall vertical", "16:9": "wide widescreen",
+    "10:16": "tall vertical", "16:10": "wide landscape", "21:9": "ultra-wide panoramic",
+    "17:22": "tall portrait, the proportions of a standard 8.5 x 11 inch page"
+  };
+  const [w, h] = String(ratio).split(":").map(Number);
+  const shape = named[ratio] || (w > h ? "wide landscape" : w < h ? "tall portrait" : "square");
+  return `${ratio} (${shape})`;
+}
+
 function buildImageGenPrompt(opts) {
-  const { userPrompt, mode, editImage, refImage } = opts;
+  const { userPrompt, mode, editImage, refImage, aspect } = opts;
+  const text = (userPrompt || "").trim();
   const parts = [];
 
   if (mode === "edit" && editImage) {
@@ -2435,7 +2689,7 @@ function buildImageGenPrompt(opts) {
     parts.push("Create a new, original, high-quality image according to the following instruction.");
   }
 
-  parts.push(`\nINSTRUCTION:\n${userPrompt.trim()}`);
+  parts.push(`\nINSTRUCTION:\n${text}`);
 
   if (refImage) {
     parts.push(
@@ -2452,6 +2706,20 @@ function buildImageGenPrompt(opts) {
     );
   }
 
+  // Authoritative output shape. When the typed text also mentions a ratio or
+  // orientation, say plainly that this value overrides it, so the model does
+  // not try to satisfy both.
+  if (aspect) {
+    let block = `\nOUTPUT FORMAT (authoritative):\nThe final image MUST be produced with an aspect ratio of exactly ${describeAspect(aspect)}.`;
+    if (ASPECT_MENTION_RE.test(text)) {
+      block +=
+        ` The INSTRUCTION above also mentions an aspect ratio, orientation or shape — IGNORE that part completely. ` +
+        `This ${aspect} value is the only correct output shape and overrides any competing ratio, orientation, ` +
+        `framing or canvas-shape wording anywhere in the instruction.`;
+    }
+    parts.push(block);
+  }
+
   return parts.join("\n");
 }
 
@@ -2459,7 +2727,7 @@ function buildImageGenPrompt(opts) {
 async function igCallGemini(modelKey, prompt, selectedRatio, quality, images, onRateLimited) {
   const modelId = MODEL_MAP[modelKey];
   const supported = SUPPORTED_RATIOS[modelKey] || [];
-  const apiRatio = supported.includes(selectedRatio) ? selectedRatio : API_FALLBACK_RATIO;
+  const apiRatio = nearestSupportedRatio(selectedRatio, supported, API_FALLBACK_RATIO);
   const imageSize = ["1K", "2K", "4K"].includes(quality) ? quality : "2K";
   const url = `${API_BASE}${modelId}:generateContent?key=${encodeURIComponent(requireApiKey("gemini"))}`;
 
@@ -2528,7 +2796,7 @@ async function igCallGemini(modelKey, prompt, selectedRatio, quality, images, on
 /* ---------- OpenAI (new via /generations, edit via /edits) ---------- */
 async function igCallOpenAI(modelKey, prompt, selectedRatio, quality, images, onRateLimited) {
   const modelId = MODEL_MAP[modelKey];
-  const apiRatio = OPENAI_RATIO_TO_SIZE[selectedRatio] ? selectedRatio : "3:2";
+  const apiRatio = nearestSupportedRatio(selectedRatio, Object.keys(OPENAI_RATIO_TO_SIZE), "3:2");
   const size = OPENAI_RATIO_TO_SIZE[apiRatio];
   const oaQuality = OPENAI_QUALITY_MAP[quality] || "medium";
   const openaiKey = requireApiKey("openai");
@@ -2613,7 +2881,9 @@ async function igCallOpenAI(modelKey, prompt, selectedRatio, quality, images, on
 
 /* ---------- Ideogram (new via /generate, edit via /remix) ---------- */
 async function igCallIdeogram(modelKey, prompt, selectedRatio, quality, images, onRateLimited) {
-  const apiRatio = IDEOGRAM_RATIO_TO_API[selectedRatio] || IDEOGRAM_RATIO_TO_API["3:2"];
+  const apiRatio = IDEOGRAM_RATIO_TO_API[
+    nearestSupportedRatio(selectedRatio, Object.keys(IDEOGRAM_RATIO_TO_API), "3:2")
+  ];
   const renderingSpeed = ["TURBO", "DEFAULT", "QUALITY"].includes(quality) ? quality : "DEFAULT";
   const ideogramKey = requireApiKey("ideogram");
   // images[0] = image to edit (remix), images[1] = optional style reference.
@@ -2692,7 +2962,7 @@ async function igCallIdeogram(modelKey, prompt, selectedRatio, quality, images, 
 /* Dispatcher for the Image Generator page. */
 async function callImageGen(opts) {
   const { modelKey, userPrompt, mode, quality, aspect, editImage, refImage, onRateLimited } = opts;
-  const prompt = buildImageGenPrompt({ userPrompt, mode, editImage, refImage });
+  const prompt = buildImageGenPrompt({ userPrompt, mode, editImage, refImage, aspect });
   // Order matters: the image being edited always comes first.
   const images = [];
   if (mode === "edit" && editImage) images.push(editImage);
@@ -2925,7 +3195,8 @@ function renderGrid() {
       const img = document.createElement("img");
       img.src = item.dataUrl;
       img.alt = item.subject;
-      img.addEventListener("click", () => openPreview(item.dataUrl));
+      // Preview is reached through the Preview button only.
+      img.style.cursor = "default";
       thumb.appendChild(img);
       const dimBadge = document.createElement("div");
       dimBadge.className = "dim-badge";
@@ -3159,14 +3430,117 @@ async function downloadAll() {
   renderGrid();
 }
 
+/* Preview modal.
+
+   Holds a list of images plus a cursor, so the same modal serves a single
+   picture (attached thumbnails, How-to-Draw results) and a multi-variation
+   result that can be stepped through with the ‹ › arrows or arrow keys. */
+let previewCtx = null; // { urls: string[], index: number }
+
+/* Click-to-zoom: each click steps 0 -> 1 -> 2 -> back to 0.
+   Every step magnifies by 30% on top of the previous one. */
+const PREVIEW_ZOOM_STEP = 1.3;
+const PREVIEW_ZOOM_MAX_STEP = 2;
+let previewZoomStep = 0;
+
+function previewScale() {
+  return Math.pow(PREVIEW_ZOOM_STEP, previewZoomStep);
+}
+
 function openPreview(dataUrl) {
-  document.getElementById("previewImg").src = dataUrl;
+  openPreviewList([dataUrl], 0);
+}
+
+function openPreviewList(urls, index) {
+  const list = (urls || []).filter(Boolean);
+  if (list.length === 0) return;
+  previewCtx = { urls: list, index: Math.min(Math.max(parseInt(index, 10) || 0, 0), list.length - 1) };
+  resetPreviewZoom();
+  renderPreview();
   document.getElementById("previewModal").classList.add("visible");
 }
 
+function renderPreview() {
+  if (!previewCtx) return;
+  const { urls, index } = previewCtx;
+  const modal = document.getElementById("previewModal");
+  document.getElementById("previewImg").src = urls[index];
+  modal.classList.toggle("has-nav", urls.length > 1);
+  document.getElementById("previewPrev").disabled = index <= 0;
+  document.getElementById("previewNext").disabled = index >= urls.length - 1;
+  document.getElementById("previewCounter").textContent = `${index + 1} / ${urls.length}`;
+}
+
+function resetPreviewZoom() {
+  previewZoomStep = 0;
+  applyPreviewZoom(50, 50);
+}
+
+/* Scale about the point under the cursor, so the detail being pointed at
+   stays put. Moving the cursor then pans the magnified image. */
+function applyPreviewZoom(originXPct, originYPct) {
+  const img = document.getElementById("previewImg");
+  const stage = document.getElementById("previewStage");
+  const badge = document.getElementById("previewZoomBadge");
+  if (!img || !stage) return;
+  const scale = previewScale();
+  if (typeof originXPct === "number" && typeof originYPct === "number") {
+    img.style.transformOrigin = `${originXPct}% ${originYPct}%`;
+  }
+  img.style.transform = `scale(${scale})`;
+  stage.classList.toggle("at-max", previewZoomStep >= PREVIEW_ZOOM_MAX_STEP);
+  if (badge) {
+    badge.classList.toggle("visible", previewZoomStep > 0);
+    badge.textContent = `${Math.round(scale * 100)}%  —  move the cursor to pan, click to ${
+      previewZoomStep >= PREVIEW_ZOOM_MAX_STEP ? "reset" : "zoom in"
+    }`;
+  }
+}
+
+// Convert a pointer event into 0-100% coordinates inside the stage.
+function previewPointerPct(e) {
+  const stage = document.getElementById("previewStage");
+  const r = stage.getBoundingClientRect();
+  if (!r.width || !r.height) return { x: 50, y: 50 };
+  const x = ((e.clientX - r.left) / r.width) * 100;
+  const y = ((e.clientY - r.top) / r.height) * 100;
+  return {
+    x: Math.min(100, Math.max(0, x)),
+    y: Math.min(100, Math.max(0, y))
+  };
+}
+
+function previewZoomClick(e) {
+  previewZoomStep = (previewZoomStep + 1) % (PREVIEW_ZOOM_MAX_STEP + 1);
+  const p = previewPointerPct(e);
+  applyPreviewZoom(p.x, p.y);
+}
+
+function previewPan(e) {
+  if (previewZoomStep === 0) return;
+  const stage = document.getElementById("previewStage");
+  stage.classList.add("panning");
+  const p = previewPointerPct(e);
+  applyPreviewZoom(p.x, p.y);
+}
+
+function previewStep(delta) {
+  if (!previewCtx) return;
+  const next = previewCtx.index + delta;
+  if (next < 0 || next >= previewCtx.urls.length) return;
+  previewCtx.index = next;
+  resetPreviewZoom(); // each variation starts unzoomed
+  renderPreview();
+}
+
 function closePreview() {
-  document.getElementById("previewModal").classList.remove("visible");
+  const modal = document.getElementById("previewModal");
+  modal.classList.remove("visible", "has-nav");
+  document.getElementById("previewStage").classList.remove("panning", "at-max");
+  document.getElementById("previewZoomBadge").classList.remove("visible");
   document.getElementById("previewImg").src = "";
+  previewZoomStep = 0;
+  previewCtx = null;
 }
 
 function resetAll() {
@@ -3276,13 +3650,14 @@ const IG_DEFAULT_CONFIG_VALUES = {
   prompt: "",
   model: "pro",
   quality: "2K",
+  aspect: IG_CUSTOM_RATIO,
   variations: "1",
   mode: "new"
 };
 
 const PAGE_CONFIG_KEYS = {
   draw:     ["subjects","aspect","steps","age","pathWidth","style","lineStyle","model","prompt","quality"],
-  imagegen: ["prompt","model","quality","variations","mode"]
+  imagegen: ["prompt","model","quality","aspect","variations","mode"]
 };
 
 function configStorageKeyFor(page) {
@@ -3313,6 +3688,7 @@ function snapshotConfig() {
       prompt:     document.getElementById("igPrompt").value,
       model:      document.getElementById("igModel").value,
       quality:    document.getElementById("igQuality").value,
+      aspect:     document.getElementById("igAspect").value,
       variations: document.getElementById("igVariations").value,
       mode:       document.getElementById("igMode").value
     };
@@ -3337,6 +3713,7 @@ function applyConfigValues(v, name) {
     if (v.prompt !== undefined) document.getElementById("igPrompt").value = v.prompt;
     if (v.model !== undefined) document.getElementById("igModel").value = v.model;
     igPopulateQualityDropdown(v.quality);
+    igPopulateAspectDropdown(v.aspect);
     if (v.quality !== undefined) document.getElementById("igQuality").value = v.quality;
     if (v.variations !== undefined) document.getElementById("igVariations").value = v.variations;
     if (v.mode !== undefined) document.getElementById("igMode").value = v.mode;
@@ -3729,7 +4106,9 @@ function saveSettings() {
 /* ===========================================================
    Page routing (How to Draw  <->  Image Generator)
    =========================================================== */
-let currentPage = "draw";
+// The Image Generator is the landing page; the markup ships already showing
+// it, so this must agree with the initial `active` classes in the HTML.
+let currentPage = "imagegen";
 
 const PAGE_META = {
   draw:     { title: 'How To Draw — Bulk Worksheet Generator <span class="version-tag">V3</span>', navClass: "active-draw" },
@@ -3785,12 +4164,35 @@ function igReadConfig() {
     prompt:     document.getElementById("igPrompt").value,
     model:      document.getElementById("igModel").value,
     quality:    document.getElementById("igQuality").value,
+    aspect:     document.getElementById("igAspect").value,
     variations: parseInt(document.getElementById("igVariations").value, 10) || 1,
-    mode:       document.getElementById("igMode").value,
-    // The Image Generator has no aspect-ratio control; use each backend's
-    // natural default so the model picks a sensible framing.
-    aspect:     API_FALLBACK_RATIO
+    mode:       document.getElementById("igMode").value
   };
+}
+
+/* Aspect-ratio options follow the selected model, exactly like the
+   How-to-Draw page. The custom 333:215 worksheet ratio is not offered here
+   because it only makes sense for the printed worksheet layout. */
+function igPopulateAspectDropdown(preserveValue) {
+  const sel = document.getElementById("igAspect");
+  const modelKey = document.getElementById("igModel").value;
+  const supported = SUPPORTED_RATIOS[modelKey] || [];
+  const prev = preserveValue !== undefined ? preserveValue : sel.value;
+  sel.innerHTML = "";
+
+  // Custom US-Letter ratio first, and it is the default.
+  const custom = document.createElement("option");
+  custom.value = IG_CUSTOM_RATIO;
+  custom.textContent = `${IG_CUSTOM_RATIO_LABEL} (default)`;
+  sel.appendChild(custom);
+
+  for (const r of supported) {
+    const o = document.createElement("option");
+    o.value = r;
+    o.textContent = r;
+    sel.appendChild(o);
+  }
+  sel.value = (prev && Array.from(sel.options).some(o => o.value === prev)) ? prev : IG_CUSTOM_RATIO;
 }
 
 function igRefreshStartBtn() {
@@ -3837,20 +4239,30 @@ function igRenderThumbs() {
   document.getElementById("igAddRefBtn").disabled = !!igState.refImage;
 }
 
+/* Outer wrapper holds the ✕ so it can sit fully outside the picture;
+   the inner box does the clipping and is what opens the preview. */
 function igMakeThumb(img, onRemove) {
   const d = document.createElement("div");
   d.className = "ig-thumb";
-  d.title = img.name;
+
+  const inner = document.createElement("div");
+  inner.className = "ig-thumb-inner";
+  inner.title = "Click to preview — " + img.name;
+  inner.onclick = () => openPreview(img.dataUrl);
+
   const im = document.createElement("img");
   im.src = img.dataUrl;
   im.alt = img.name;
+  inner.appendChild(im);
+
   const x = document.createElement("button");
   x.type = "button";
   x.className = "ig-thumb-x";
   x.innerHTML = "&times;";
   x.title = "Remove " + img.name;
   x.onclick = (e) => { e.stopPropagation(); onRemove(); };
-  d.append(im, x);
+
+  d.append(inner, x);
   return d;
 }
 
@@ -3936,8 +4348,36 @@ function igRenderGrid() {
       const img = document.createElement("img");
       img.src = active.dataUrl;
       img.alt = item.name;
-      img.addEventListener("click", () => igOpenPreview(item));
+      // Preview is reached through the Preview button only.
+      img.style.cursor = item.total > 1 ? "grab" : "default";
       thumb.appendChild(img);
+
+      // ‹ › step through variations in place
+      if (item.total > 1) {
+        const prev = document.createElement("button");
+        prev.type = "button";
+        prev.className = "card-nav prev";
+        prev.innerHTML = "&#8249;";
+        prev.title = "Previous variation";
+        prev.disabled = item.activeVariant <= 0;
+        prev.onclick = (e) => {
+          e.stopPropagation();
+          if (item.activeVariant > 0) { item.activeVariant--; igRenderGrid(); }
+        };
+
+        const next = document.createElement("button");
+        next.type = "button";
+        next.className = "card-nav next";
+        next.innerHTML = "&#8250;";
+        next.title = "Next variation";
+        next.disabled = item.activeVariant >= item.variants.length - 1;
+        next.onclick = (e) => {
+          e.stopPropagation();
+          if (item.activeVariant < item.variants.length - 1) { item.activeVariant++; igRenderGrid(); }
+        };
+
+        thumb.append(prev, next);
+      }
 
       const dimBadge = document.createElement("div");
       dimBadge.className = "dim-badge";
@@ -4016,9 +4456,11 @@ function igAttachSwipe(thumb, item) {
   thumb.addEventListener("pointerleave", () => { startX = null; });
 }
 
+// Preview opens on the variation currently shown, and the ‹ › arrows inside
+// the modal walk the rest of that card's variations.
 function igOpenPreview(item) {
-  const active = item.variants[item.activeVariant];
-  if (active) openPreview(active.dataUrl);
+  if (!item.variants || item.variants.length === 0) return;
+  openPreviewList(item.variants.map(v => v.dataUrl), item.activeVariant);
 }
 
 function igUpdateErrorBanner() {
@@ -4247,7 +4689,17 @@ window.addEventListener("storage", (e) => {
   if (e.key === BALANCE_STORAGE_KEY) updateBalanceDisplay();
 });
 document.getElementById("subjects").addEventListener("input", refreshStartBtn);
-document.getElementById("previewModal").addEventListener("click", closePreview);
+// Clicking the dim backdrop closes; clicks on the image or arrows must not.
+document.getElementById("previewModal").addEventListener("click", (e) => {
+  if (e.target.id === "previewModal") closePreview();
+});
+// Clicking the picture zooms rather than closing; moving over it pans.
+const previewStage = document.getElementById("previewStage");
+previewStage.addEventListener("click", (e) => { e.stopPropagation(); previewZoomClick(e); });
+previewStage.addEventListener("mousemove", previewPan);
+previewStage.addEventListener("mouseleave", () => previewStage.classList.remove("panning"));
+document.getElementById("previewPrev").addEventListener("click", (e) => { e.stopPropagation(); previewStep(-1); });
+document.getElementById("previewNext").addEventListener("click", (e) => { e.stopPropagation(); previewStep(1); });
 
 document.getElementById("model").addEventListener("change", () => {
   populateAspectDropdown();
@@ -4314,8 +4766,15 @@ document.querySelectorAll(".key-edit-btn").forEach(btn => {
   });
 });
 document.addEventListener("keydown", (e) => {
+  const previewOpen = document.getElementById("previewModal").classList.contains("visible");
+  if (previewOpen && (e.key === "ArrowLeft" || e.key === "ArrowRight")) {
+    e.preventDefault();
+    previewStep(e.key === "ArrowLeft" ? -1 : 1);
+    return;
+  }
   if (e.key !== "Escape") return;
-  if (document.getElementById("settingsModal").classList.contains("visible")) closeSettings();
+  if (previewOpen) closePreview();
+  else if (document.getElementById("settingsModal").classList.contains("visible")) closeSettings();
   else if (document.getElementById("sideMenu").classList.contains("open")) closeSideMenu();
 });
 
@@ -4329,7 +4788,23 @@ document.getElementById("igSaveConfigBtn").addEventListener("click", openSaveMod
 
 document.getElementById("igPrompt").addEventListener("input", igRefreshStartBtn);
 document.getElementById("igMode").addEventListener("change", igRefreshModeUI);
-document.getElementById("igModel").addEventListener("change", () => igPopulateQualityDropdown());
+document.getElementById("igModel").addEventListener("change", () => {
+  igPopulateQualityDropdown();
+  igPopulateAspectDropdown();
+});
+
+// Tapping the info icon pins the bubble open (touch devices have no hover).
+document.querySelectorAll(".ig-info").forEach(info => {
+  info.addEventListener("click", (e) => {
+    e.stopPropagation();
+    info.classList.toggle("pinned");
+  });
+});
+document.addEventListener("click", (e) => {
+  document.querySelectorAll(".ig-info.pinned").forEach(info => {
+    if (!info.contains(e.target)) info.classList.remove("pinned");
+  });
+});
 
 document.getElementById("igAddEditBtn").addEventListener("click", () => {
   document.getElementById("igEditFileInput").click();
@@ -4346,7 +4821,7 @@ document.getElementById("igRefFileInput").addEventListener("change", async (e) =
   e.target.value = "";
 });
 
-["igPrompt","igModel","igQuality","igVariations","igMode"].forEach(id => {
+["igPrompt","igModel","igQuality","igAspect","igVariations","igMode"].forEach(id => {
   const el = document.getElementById(id);
   el.addEventListener("input", refreshSaveConfigStatus);
   el.addEventListener("change", refreshSaveConfigStatus);
@@ -4356,16 +4831,17 @@ document.getElementById("igRefFileInput").addEventListener("change", async (e) =
 populateAspectDropdown(CUSTOM_RATIO_DEFAULT);
 populateQualityDropdown();
 igPopulateQualityDropdown();
+igPopulateAspectDropdown();
 igRefreshModeUI();
 igRefreshStartBtn();
 igRenderGrid();
-renderConfigsMenu();
 refreshStartBtn();
-refreshSaveConfigStatus();
-updateConfigsButtonLabel();
 loadCostState();
 updateCostCounter();
 updateBalanceDisplay();
+renderConfigsMenu();
+refreshSaveConfigStatus();
+updateConfigsButtonLabel();
 
 // First run with no keys stored yet: open Settings so the user knows where
 // to put them instead of hitting a wall of 401s on the first generation.
