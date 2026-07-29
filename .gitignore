@@ -1,0 +1,33 @@
+# macOS
+.DS_Store
+**/.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+.Spotlight-V100
+.Trashes
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Editors / IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Python (cors-proxy.py)
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Local secrets — API keys belong in the app's Settings dialog
+# (browser localStorage), never in a committed file.
+.env
+.env.*
+secrets.json
