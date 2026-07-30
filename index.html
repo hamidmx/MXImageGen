@@ -803,7 +803,51 @@
   .ig-add-btn .plus { font-size: 17px; font-weight: 400; line-height: 1; }
   .ig-add-btn.blue { background: #2563eb; }
   .ig-add-btn.orange { background: #f97316; }
+  .ig-add-btn.green { background: #16a34a; }
   .ig-add-btn:disabled { background: #9ca3af; cursor: not-allowed; opacity: 0.65; }
+  .ig-add-btn.hidden { display: none; }
+
+  /* CSV data-file chip — same footprint as an image thumbnail, but a
+     document tile since there is nothing to preview. */
+  .ig-thumb.csv-thumb { width: auto; min-width: 55px; }
+  .ig-thumb.csv-thumb .ig-thumb-inner {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 12px 0 10px;
+    background: #f0fdf4;
+    border-color: #16a34a;
+    cursor: default;
+    width: auto;
+  }
+  .ig-thumb.csv-thumb .csv-icon {
+    font-size: 19px;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+  .ig-thumb.csv-thumb .csv-meta {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-width: 0;
+    line-height: 1.25;
+  }
+  .ig-thumb.csv-thumb .csv-name {
+    font-size: 12px;
+    font-weight: 700;
+    color: #14532d;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 190px;
+  }
+  .ig-thumb.csv-thumb .csv-sub {
+    font-size: 10.5px;
+    font-weight: 600;
+    color: #15803d;
+    white-space: nowrap;
+  }
+  .ig-thumb.csv-thumb .csv-sub.bad { color: #b91c1c; }
   .ig-thumbs {
     display: flex;
     gap: 12px;
@@ -912,6 +956,193 @@
   .ig-info .ig-info-bubble strong { font-weight: 700; }
   .ig-info .ig-info-bubble ul { margin: 6px 0 0; padding-left: 17px; }
   .ig-info .ig-info-bubble li { margin-bottom: 5px; }
+  .ig-info .ig-info-bubble code {
+    background: rgba(120,53,15,0.10);
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  /* Only the block matching the current Generation Mode is shown. */
+  .ig-info .ig-info-mode { display: none; }
+  .ig-info .ig-info-mode.active { display: block; }
+
+  /* Generate button — gradient, slightly larger label */
+  #igStartBtn {
+    background-image: linear-gradient(90deg, #2563eb 0%, #7c3aed 100%);
+    background-color: #2563eb;
+    border: none;
+    color: #fff;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    padding: 9px 26px;
+  }
+  #igStartBtn:hover:not(:disabled) {
+    background-image: linear-gradient(90deg, #1d4ed8 0%, #6d28d9 100%);
+  }
+  #igStartBtn:disabled {
+    background-image: none;
+    background-color: #c7ccd4;
+    color: #fff;
+  }
+
+  /* ---------- Bulk entry-picker modal ---------- */
+  .bulk-modal {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.55);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1250;
+    padding: 24px;
+  }
+  .bulk-modal.visible { display: flex; }
+  .bulk-box {
+    background: #fff;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 1000px;
+    max-height: 88vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 18px 60px rgba(0,0,0,0.35);
+    overflow: hidden;
+  }
+  .bulk-head {
+    padding: 16px 20px 12px;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  .bulk-head h3 {
+    margin: 0 0 3px;
+    font-size: 17px;
+    color: #111827;
+  }
+  .bulk-head .bulk-sub {
+    font-size: 12.5px;
+    color: #6b7280;
+  }
+  .bulk-tools {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    border-bottom: 1px solid #e5e7eb;
+    background: #f9fafb;
+    flex-wrap: wrap;
+  }
+  .bulk-tools button {
+    padding: 5px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: inherit;
+    border-radius: 5px;
+    border: 1px solid #d1d5db;
+    background: #fff;
+    color: #374151;
+    cursor: pointer;
+  }
+  .bulk-tools button:hover { background: #f3f4f6; }
+  .bulk-tools .bulk-legend {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-size: 11.5px;
+    color: #6b7280;
+  }
+  .bulk-tools .bulk-legend .sw {
+    display: inline-block;
+    width: 11px; height: 11px;
+    border-radius: 3px;
+    border: 1px solid #d1d5db;
+    vertical-align: -1px;
+    margin-right: 5px;
+  }
+  .bulk-tools .bulk-legend .sw.done { background: #dcfce7; border-color: #86efac; }
+  .bulk-tools .bulk-legend .sw.fresh { background: #fff; }
+  .bulk-table-wrap {
+    overflow: auto;
+    flex: 1;
+    min-height: 120px;
+  }
+  .bulk-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+  }
+  .bulk-table th, .bulk-table td {
+    padding: 7px 10px;
+    text-align: left;
+    border-bottom: 1px solid #f1f3f5;
+    white-space: nowrap;
+    max-width: 260px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .bulk-table thead th {
+    position: sticky;
+    top: 0;
+    background: #eef2f7;
+    color: #374151;
+    font-weight: 700;
+    font-size: 11.5px;
+    letter-spacing: 0.2px;
+    z-index: 1;
+    border-bottom: 1px solid #d7dde5;
+  }
+  .bulk-table thead th.varcol { color: #1d4ed8; }
+  .bulk-table tbody tr { background: #fff; cursor: pointer; }
+  .bulk-table tbody tr.done { background: #dcfce7; }
+  .bulk-table tbody tr:hover { filter: brightness(0.97); }
+  .bulk-table tbody tr.selected { outline: 2px solid #7c3aed; outline-offset: -2px; }
+  .bulk-table td.cb, .bulk-table th.cb { width: 34px; text-align: center; }
+  .bulk-table input[type="checkbox"] { cursor: pointer; width: 15px; height: 15px; }
+  .bulk-table td.badge-cell { width: 74px; }
+  .bulk-done-tag {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    color: #166534;
+    background: #bbf7d0;
+    border-radius: 20px;
+    padding: 1px 7px;
+  }
+  .bulk-foot {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 13px 20px;
+    border-top: 1px solid #e5e7eb;
+    background: #f9fafb;
+  }
+  .bulk-foot .bulk-count {
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+    margin-right: auto;
+  }
+  .bulk-foot button {
+    padding: 8px 22px;
+    font-size: 13.5px;
+    font-weight: 600;
+    font-family: inherit;
+    border-radius: 6px;
+    border: 1px solid #d1d5db;
+    background: #fff;
+    color: #374151;
+    cursor: pointer;
+  }
+  .bulk-foot button.primary {
+    border: none;
+    color: #fff;
+    background-image: linear-gradient(90deg, #2563eb 0%, #7c3aed 100%);
+  }
+  .bulk-foot button.primary:disabled {
+    background-image: none;
+    background: #c7ccd4;
+    cursor: not-allowed;
+  }
 
   /* prev/next arrows inside a result card */
   .card .thumb .card-nav {
@@ -1160,16 +1391,44 @@
       <div class="ig-prompt-head">
         <span class="ig-info" tabindex="0" aria-label="How your prompt is used">i
           <span class="ig-info-bubble">
-            <strong>How your input is turned into the final request</strong>
-            <ul>
-              <li>Your text is never sent raw. It is wrapped into a structured prompt rebuilt for the selected <strong>Drawing Model</strong>, with your words kept as the core instruction.</li>
-              <li><strong>Generation Mode = New</strong> asks for an original image. <strong>Edit</strong> asks the model to recreate each attached image while keeping its subject and composition recognisable.</li>
-              <li><strong>Images to edit</strong> (blue button, up to 20) are sent <em>one request per image</em>, so each one gets its own result box. Their file names are named in the prompt.</li>
-              <li>The <strong>Reference image</strong> (orange button, max 1) is described as a style guide only — its colours, technique and look are copied, not its subject.</li>
-              <li><strong>Aspect Ratio</strong> is applied as the authoritative output shape and <em>overrides any ratio you typed</em> in the text.</li>
-              <li><strong>Generation per image</strong> sends that many independent requests, so variations differ genuinely. Browse them with the ‹ › arrows on the result.</li>
-              <li><strong>Quality</strong> maps to each provider's own tier (1K/2K/4K, or Turbo/Default/Quality for Ideogram) and drives the per-image cost.</li>
-            </ul>
+            <!-- One block per Generation Mode; igRefreshInfoBubble() shows the active one. -->
+            <span class="ig-info-mode" data-mode="new">
+              <strong>Generation Mode: New — one original image</strong>
+              <ul>
+                <li>Your text is never sent raw. It is wrapped into a structured prompt rebuilt for the selected <strong>Drawing Model</strong>, with your words kept as the core instruction.</li>
+                <li>The model is asked for a brand-new, original image. No source picture is attached.</li>
+                <li>The <strong>Reference image</strong> (orange button, max 1) is described as a style guide only — its colours, technique and look are copied, not its subject.</li>
+                <li><strong>Aspect Ratio</strong> is applied as the authoritative output shape and <em>overrides any ratio you typed</em> in the text.</li>
+                <li><strong>Generation per image</strong> sends that many independent requests, so variations differ genuinely. Browse them with the ‹ › arrows on the result.</li>
+                <li>Results are named <code>gen_&lt;Model&gt;_1</code>, with extra variations as <code>-2</code>, <code>-3</code>.</li>
+              </ul>
+            </span>
+
+            <span class="ig-info-mode" data-mode="edit">
+              <strong>Generation Mode: Edit — recreate the images you attach</strong>
+              <ul>
+                <li>Your text becomes the editing instruction, wrapped into a structured prompt for the selected <strong>Drawing Model</strong>.</li>
+                <li><strong>Images to edit</strong> (blue button, up to 20) are sent <em>one request per image</em>, so each one gets its own result box. Their file names are named in the prompt.</li>
+                <li>Each image is recreated while keeping its subject and composition recognisable, unless your instruction says otherwise.</li>
+                <li>The <strong>Reference image</strong> (orange button, max 1) is a style guide only — its look is copied, not its subject.</li>
+                <li><strong>Aspect Ratio</strong> is the authoritative output shape and <em>overrides any ratio you typed</em>.</li>
+                <li><strong>Generation per image</strong> multiplies the requests: 5 images × 3 = 15 requests.</li>
+                <li>Results keep each source file's name, with extra variations as <code>-2</code>, <code>-3</code>.</li>
+              </ul>
+            </span>
+
+            <span class="ig-info-mode" data-mode="bulk">
+              <strong>Generation Mode: New Bulk Images — one image per CSV row</strong>
+              <ul>
+                <li>Variables are <strong>always UPPERCASE and always start with <code>VAR_</code></strong> — e.g. <code>{VAR_MAIN_SUBJECT}</code>, <code>{VAR_TITLE}</code>. Both <code>{…}</code> and <code>{{…}}</code> braces work. Anything else in braces is left untouched, so ordinary text is safe.</li>
+                <li>Your CSV's header row uses those same <code>VAR_</code> names. Extra columns such as <code>#</code> are kept for reference but never substituted.</li>
+                <li>Click the green <strong>Upload data file</strong> button (enabled once a prompt is typed) and pick one <strong>.csv</strong>. Every row after the header is one image.</li>
+                <li>Nothing is sent until the file is checked: each <code>VAR_</code> placeholder needs a matching column and at least one non-empty row. Problems are reported precisely and generation is blocked.</li>
+                <li><strong>Generate</strong> opens a preview of the file where you tick exactly which entries to run. <strong>Select all</strong> / <strong>Clear</strong> help; rows already generated in this session are tinted green but can be re-run.</li>
+                <li>Each chosen row becomes its own rebuilt prompt with that row's exact values — <strong>10 rows = 10 requests</strong>, and 30 with <strong>Generation per image = 3</strong>.</li>
+                <li>Outputs are named <code>&lt;#&gt;_gen_&lt;Model&gt;_&lt;first 10 chars of the first variable&gt;</code>, e.g. <code>14_gen_GPT_BabySeaTur</code>.</li>
+              </ul>
+            </span>
           </span>
         </span>
         <h2>Prompt</h2>
@@ -1179,6 +1438,7 @@
       <div class="ig-strip-row">
         <div class="ig-strip-side edit-side">
           <button type="button" id="igAddEditBtn" class="ig-add-btn blue" title="Add images to edit (Edit mode only, up to 20)"><span class="plus">+</span>Images to edit</button>
+          <button type="button" id="igAddDataBtn" class="ig-add-btn green hidden" title="Upload a CSV data file"><span class="plus">+</span>Upload data file</button>
           <div id="igEditThumbs" class="ig-thumbs"></div>
           <span id="igEditCount" class="ig-count-hint"></span>
         </div>
@@ -1190,6 +1450,7 @@
 
       <input type="file" id="igEditFileInput" accept="image/*" multiple hidden />
       <input type="file" id="igRefFileInput" accept="image/*" hidden />
+      <input type="file" id="igDataFileInput" accept=".csv,text/csv" hidden />
 
       <div class="ig-fields">
         <div class="field">
@@ -1223,13 +1484,14 @@
           <select id="igMode">
             <option value="new" selected>New</option>
             <option value="edit">Edit</option>
+            <option value="bulk">New Bulk Images</option>
           </select>
         </div>
       </div>
     </div>
 
     <div class="actions">
-      <button id="igStartBtn" class="primary" disabled>START</button>
+      <button id="igStartBtn" class="primary" disabled>GENERATE</button>
       <button id="igResetBtn">Reset</button>
       <button id="igDownloadAllBtn" disabled>Download All (ZIP)</button>
       <button id="igSaveConfigBtn" type="button">Save Config</button>
@@ -1256,6 +1518,31 @@
   </div>
 </div><!-- /page-imagegen -->
 </main>
+
+<div id="bulkModal" class="bulk-modal">
+  <div class="bulk-box">
+    <div class="bulk-head">
+      <h3>Select entries to generate</h3>
+      <div class="bulk-sub" id="bulkSubtitle"></div>
+    </div>
+    <div class="bulk-tools">
+      <button type="button" id="bulkSelectAllBtn">Select all</button>
+      <button type="button" id="bulkClearBtn">Clear</button>
+      <span class="bulk-legend">
+        <span><span class="sw fresh"></span>not generated yet</span>
+        <span><span class="sw done"></span>already generated this session</span>
+      </span>
+    </div>
+    <div class="bulk-table-wrap">
+      <table class="bulk-table" id="bulkTable"></table>
+    </div>
+    <div class="bulk-foot">
+      <span class="bulk-count" id="bulkCount"></span>
+      <button type="button" id="bulkCancelBtn">Cancel</button>
+      <button type="button" id="bulkStartBtn" class="primary">Start</button>
+    </div>
+  </div>
+</div>
 
 <div id="settingsModal" class="settings-modal">
   <div class="settings-box">
@@ -2724,50 +3011,78 @@ function describeAspect(ratio) {
   return `${ratio} (${shape})`;
 }
 
+/* Assemble the production request sent to the model.
+
+   Structured into labelled sections so the model can tell the creative
+   brief apart from the hard output constraints, with the brief kept verbatim
+   as the authority on content. Deliberately compact — long preambles crowd
+   out the brief itself and Ideogram in particular degrades when the layout
+   instructions are buried. */
 function buildImageGenPrompt(opts) {
-  const { userPrompt, mode, editImage, refImage, aspect } = opts;
+  const { userPrompt, mode, editImage, refImage, aspect, varValues } = opts;
   const text = (userPrompt || "").trim();
+  const isEdit = mode === "edit" && !!editImage;
   const parts = [];
 
-  if (mode === "edit" && editImage) {
-    parts.push(
-      `Edit and recreate the attached source image "${editImage.name}" according to the following instruction, ` +
-      `keeping its overall subject and composition recognisable unless the instruction says otherwise.`
-    );
-  } else {
-    parts.push("Create a new, original, high-quality image according to the following instruction.");
-  }
+  parts.push(
+    "ROLE: Professional illustrator and layout designer producing final, print-ready artwork."
+  );
 
-  parts.push(`\nINSTRUCTION:\n${text}`);
+  parts.push(
+    isEdit
+      ? `TASK: Recreate the attached source image "${editImage.name}" so that it satisfies the CREATIVE BRIEF below, ` +
+        `keeping its subject and overall composition recognisable unless the brief says otherwise.`
+      : "TASK: Produce one new, original, finished image that satisfies the CREATIVE BRIEF below."
+  );
+
+  parts.push(`\nCREATIVE BRIEF (authoritative on content — follow it literally):\n${text}`);
+
+  /* Bulk rows: restate this row's exact values. The brief already contains
+     them inline, but listing them verbatim materially improves the accuracy
+     of rendered text (titles, answer labels), which is where these layouts
+     usually fail. */
+  if (varValues && Object.keys(varValues).length) {
+    const lines = Object.keys(varValues).map(k => `- ${k} = "${varValues[k]}"`).join("\n");
+    parts.push(
+      `\nEXACT VALUES FOR THIS IMAGE (already applied in the brief — reproduce character-for-character, ` +
+      `correct spelling, no substitutions, no pluralisation changes):\n${lines}`
+    );
+  }
 
   if (refImage) {
     parts.push(
-      `\nSTYLE REFERENCE: An additional reference image "${refImage.name}" is attached. ` +
-      `Use it as the guide for visual style, colour palette, rendering technique and overall look — ` +
-      `do not copy its subject matter, only its style.`
+      `\nSTYLE REFERENCE: The attached image "${refImage.name}" defines visual style only — ` +
+      `colour palette, rendering technique, line quality and overall look. Do not copy its subject matter.`
     );
   }
 
-  if (mode === "edit" && editImage) {
+  if (isEdit) {
     parts.push(
-      `\nThe FIRST attached image ("${editImage.name}") is the image to edit.` +
-      (refImage ? ` The SECOND attached image ("${refImage.name}") is the style reference only.` : "")
+      `\nATTACHMENTS: the FIRST image ("${editImage.name}") is the one to edit.` +
+      (refImage ? ` The SECOND ("${refImage.name}") is the style reference only.` : "")
     );
   }
 
-  // Authoritative output shape. When the typed text also mentions a ratio or
-  // orientation, say plainly that this value overrides it, so the model does
-  // not try to satisfy both.
+  // Authoritative output shape. When the brief also mentions a ratio or
+  // orientation, say plainly that this value overrides it.
   if (aspect) {
-    let block = `\nOUTPUT FORMAT (authoritative):\nThe final image MUST be produced with an aspect ratio of exactly ${describeAspect(aspect)}.`;
+    let block = `\nOUTPUT FORMAT (authoritative — overrides the brief):\n` +
+                `- Aspect ratio: exactly ${describeAspect(aspect)}.`;
     if (ASPECT_MENTION_RE.test(text)) {
-      block +=
-        ` The INSTRUCTION above also mentions an aspect ratio, orientation or shape — IGNORE that part completely. ` +
-        `This ${aspect} value is the only correct output shape and overrides any competing ratio, orientation, ` +
-        `framing or canvas-shape wording anywhere in the instruction.`;
+      block += `\n- The brief also mentions a ratio, orientation or shape — IGNORE that part. ` +
+               `${aspect} is the only correct output shape.`;
     }
     parts.push(block);
   }
+
+  parts.push(
+    "\nQUALITY BAR:\n" +
+    "- Deliver a finished, production-ready image, not a sketch, mockup or concept study.\n" +
+    "- Any text must be spelled exactly as specified, fully legible, and contained inside its element.\n" +
+    "- Compose within the frame: nothing important cropped, clipped or running off the edge.\n" +
+    "- No watermarks, signatures, borders, UI chrome, or captions that the brief did not ask for.\n" +
+    "- No placeholder or lorem-ipsum text, and no duplicated subjects unless the brief asks for them."
+  );
 
   return parts.join("\n");
 }
@@ -3007,8 +3322,8 @@ async function igCallIdeogram(modelKey, prompt, selectedRatio, quality, images, 
 
 /* Dispatcher for the Image Generator page. */
 async function callImageGen(opts) {
-  const { modelKey, userPrompt, mode, quality, aspect, editImage, refImage, onRateLimited } = opts;
-  const prompt = buildImageGenPrompt({ userPrompt, mode, editImage, refImage, aspect });
+  const { modelKey, userPrompt, mode, quality, aspect, editImage, refImage, varValues, onRateLimited } = opts;
+  const prompt = buildImageGenPrompt({ userPrompt, mode, editImage, refImage, aspect, varValues });
   // Order matters: the image being edited always comes first.
   const images = [];
   if (mode === "edit" && editImage) images.push(editImage);
@@ -4222,11 +4537,192 @@ function igModelSlug(modelKey) {
   return IG_MODEL_SLUG[modelKey] || String(modelKey || "Model");
 }
 
+/* ===========================================================
+   BULK MODE — CSV data file
+
+   The prompt carries placeholders like {MAIN_SUBJECT}; the CSV header row
+   supplies the variable names and every following row becomes one image.
+   =========================================================== */
+
+/* Minimal but correct RFC-4180 parser: handles quoted fields containing
+   commas, escaped "" quotes, embedded newlines, CRLF, and a leading BOM. */
+function parseCSV(text) {
+  const src = String(text || "").replace(/^﻿/, "");
+  const rows = [];
+  let row = [], field = "", inQuotes = false;
+
+  for (let i = 0; i < src.length; i++) {
+    const c = src[i];
+    if (inQuotes) {
+      if (c === '"') {
+        if (src[i + 1] === '"') { field += '"'; i++; }   // escaped quote
+        else inQuotes = false;
+      } else field += c;
+      continue;
+    }
+    if (c === '"') { inQuotes = true; continue; }
+    if (c === ",") { row.push(field); field = ""; continue; }
+    if (c === "\r") { if (src[i + 1] === "\n") i++; row.push(field); rows.push(row); row = []; field = ""; continue; }
+    if (c === "\n") { row.push(field); rows.push(row); row = []; field = ""; continue; }
+    field += c;
+  }
+  row.push(field);
+  rows.push(row);
+
+  // Drop rows that are entirely blank (trailing newline, stray separators).
+  return rows.filter(r => r.some(cell => String(cell).trim() !== ""));
+}
+
+/* Turn parsed rows into { headers, rows:[{col:value}] }. */
+function csvToRecords(text) {
+  const table = parseCSV(text);
+  if (table.length === 0) return { headers: [], rows: [] };
+  const headers = table[0].map(h => String(h).trim());
+  const rows = table.slice(1).map(cells => {
+    const rec = {};
+    headers.forEach((h, i) => { rec[h] = (cells[i] !== undefined ? String(cells[i]).trim() : ""); });
+    return rec;
+  });
+  return { headers, rows };
+}
+
+/* Placeholder convention.
+
+   A bulk variable is ALWAYS uppercase and ALWAYS prefixed VAR_ — e.g.
+   {VAR_MAIN_SUBJECT}, {VAR_TITLE}. Both {…} and {{…}} braces are accepted.
+   CSV headers use the identical names. Anchoring on VAR_ means the prompt
+   can contain ordinary braces (JSON snippets, CSS, measurements) without
+   being mistaken for a variable, and it works for any prompt the user
+   writes rather than any particular template. */
+const IG_VAR_PREFIX = "VAR_";
+const IG_VAR_RE = /\{\{?\s*(VAR_[A-Z0-9_]+)\s*\}?\}/g;
+
+// Braced tokens that look like an attempt at a variable but break the rule
+// (lowercase, or missing the VAR_ prefix). Used to give a precise hint.
+const IG_NEARMISS_RE = /\{\{?\s*([A-Za-z_][A-Za-z0-9_]*)\s*\}?\}/g;
+
+function extractPromptVariables(text) {
+  const found = [];
+  const seen = new Set();
+  let m;
+  IG_VAR_RE.lastIndex = 0;
+  while ((m = IG_VAR_RE.exec(String(text || ""))) !== null) {
+    if (!seen.has(m[1])) { seen.add(m[1]); found.push(m[1]); }
+  }
+  return found;
+}
+
+// Tokens the user probably meant as variables but that do not follow VAR_.
+function findNearMissPlaceholders(text) {
+  const out = [];
+  const seen = new Set();
+  let m;
+  IG_NEARMISS_RE.lastIndex = 0;
+  while ((m = IG_NEARMISS_RE.exec(String(text || ""))) !== null) {
+    const tok = m[1];
+    if (tok.startsWith(IG_VAR_PREFIX) && tok === tok.toUpperCase()) continue; // valid
+    if (!seen.has(tok)) { seen.add(tok); out.push(tok); }
+  }
+  return out;
+}
+
+// CSV columns that are variables (VAR_ prefixed, uppercase).
+function csvVariableHeaders(headers) {
+  return (headers || []).filter(h => {
+    const t = String(h).trim();
+    return t.startsWith(IG_VAR_PREFIX) && t === t.toUpperCase();
+  });
+}
+
+/* Replace every placeholder with this row's value.
+
+   Also keeps any `VAR: "example"` declaration line in step with the row.
+   The sample prompt declares its variables that way before using them, and
+   leaving a stale example value there would contradict the substituted text
+   on every row but the first. */
+function applyRowToPrompt(text, row, headers) {
+  let out = String(text || "").replace(IG_VAR_RE, (whole, name) =>
+    Object.prototype.hasOwnProperty.call(row, name) ? row[name] : whole
+  );
+  // Only VAR_ columns can appear as declaration lines.
+  for (const h of csvVariableHeaders(headers)) {
+    if (!Object.prototype.hasOwnProperty.call(row, h)) continue;
+    const decl = new RegExp(`^([ \\t]*${h}[ \\t]*:[ \\t]*)"[^"\\n]*"[ \\t]*$`, "gm");
+    out = out.replace(decl, (_m, prefix) => `${prefix}"${row[h]}"`);
+  }
+  return out;
+}
+
+/* Confirm the CSV can actually drive this prompt before anything is sent. */
+function validateBulkData(promptText, data) {
+  const vars = extractPromptVariables(promptText);
+  if (!data || !data.rows) return { ok: false, error: "No data file loaded." };
+
+  if (vars.length === 0) {
+    const near = findNearMissPlaceholders(promptText);
+    let hint = `The prompt has no variables. Variables must be UPPERCASE and start with ${IG_VAR_PREFIX} — for example {${IG_VAR_PREFIX}MAIN_SUBJECT}.`;
+    if (near.length) {
+      hint += ` Found ${near.slice(0, 4).map(t => "{" + t + "}").join(", ")}` +
+              `${near.length > 4 ? ", …" : ""} — rename to ` +
+              `{${IG_VAR_PREFIX}${String(near[0]).toUpperCase().replace(/^VAR_/, "")}} style.`;
+    }
+    return { ok: false, error: hint };
+  }
+
+  if (data.rows.length === 0) {
+    return { ok: false, error: `"${data.name}" has a header row but no data rows.` };
+  }
+
+  const headerSet = new Set(data.headers.map(h => String(h).trim()));
+  const missing = vars.filter(v => !headerSet.has(v));
+  if (missing.length) {
+    const csvVars = csvVariableHeaders(data.headers);
+    return { ok: false, error:
+      `Missing column${missing.length > 1 ? "s" : ""} in "${data.name}": ${missing.join(", ")}. ` +
+      (csvVars.length
+        ? `The file provides: ${csvVars.join(", ")}.`
+        : `That file has no ${IG_VAR_PREFIX} columns at all — its headers are: ${data.headers.filter(Boolean).join(", ")}.`) };
+  }
+
+  // A variable whose every cell is empty would silently blank the prompt.
+  const allEmpty = vars.filter(v => data.rows.every(r => !String(r[v] || "").trim()));
+  if (allEmpty.length) {
+    return { ok: false, error:
+      `Column${allEmpty.length > 1 ? "s" : ""} ${allEmpty.join(", ")} in "${data.name}" ` +
+      `${allEmpty.length > 1 ? "are" : "is"} empty for every row.` };
+  }
+  return { ok: true, vars, rowCount: data.rows.length };
+}
+
+/* Entry number for naming: the '#' column when present, else the row's
+   1-based position. Works for any CSV, not just the sample. */
+function bulkEntryNumber(row, headers, rowIndex) {
+  const numHeader = (headers || []).find(h => {
+    const t = String(h).trim();
+    return t === "#" || /^(no|num|number|index|id|entry)$/i.test(t);
+  });
+  const raw = numHeader ? String(row[numHeader] || "").trim() : "";
+  return raw || String(rowIndex + 1);
+}
+
+/* Result/file name for a bulk entry:
+   <entry>_gen_<Model>_<first 10 alphanumerics of the first variable's value>
+   e.g.  14_gen_GPT_BabySeaTur */
+function bulkCardName(row, headers, rowIndex, modelKey, firstVar) {
+  const entry = bulkEntryNumber(row, headers, rowIndex);
+  const slug = igModelSlug(modelKey);
+  const short = String(row[firstVar] || "").replace(/[^A-Za-z0-9]/g, "").slice(0, 10);
+  return short ? `${entry}_gen_${slug}_${short}` : `${entry}_gen_${slug}`;
+}
+
 const igState = {
   items: [],        // { name, status, variants:[{dataUrl,base64,mime,cost}], activeVariant, ... }
   running: false,
   editImages: [],   // { name, base64, mime, dataUrl }
-  refImage: null    // { name, base64, mime, dataUrl }
+  refImage: null,   // { name, base64, mime, dataUrl }
+  dataFile: null,   // bulk mode: { name, headers:[], rows:[{col:value}] }
+  bulkGenerated: new Set(),  // row indices already generated OK this session
+  bulkSelection: new Set()   // row indices ticked in the picker
 };
 
 function igReadConfig() {
@@ -4268,36 +4764,100 @@ function igPopulateAspectDropdown(preserveValue) {
 function igRefreshStartBtn() {
   const btn = document.getElementById("igStartBtn");
   if (igState.running) { btn.disabled = true; return; }
-  btn.disabled = document.getElementById("igPrompt").value.trim().length === 0;
+  const hasPrompt = document.getElementById("igPrompt").value.trim().length > 0;
+  if (!hasPrompt) {
+    btn.disabled = true;
+    btn.title = "Type a prompt first";
+    return;
+  }
+  // Bulk mode additionally needs a CSV that actually satisfies the prompt.
+  if (document.getElementById("igMode").value === "bulk") {
+    if (!igState.dataFile) {
+      btn.disabled = true;
+      btn.title = 'Upload a CSV data file to generate in bulk';
+      return;
+    }
+    const check = validateBulkData(document.getElementById("igPrompt").value, igState.dataFile);
+    if (!check.ok) {
+      btn.disabled = true;
+      btn.title = check.error;
+      return;
+    }
+    const reqs = check.rowCount * (parseInt(document.getElementById("igVariations").value, 10) || 1);
+    btn.disabled = false;
+    btn.title = `Generate ${check.rowCount} row(s) — ${reqs} request(s)`;
+    return;
+  }
+  btn.disabled = false;
+  btn.title = "";
 }
 
-// The blue "+" is only usable in Edit mode, per spec.
+/* Blue "Images to edit" shows for New/Edit (enabled only in Edit);
+   in Bulk mode it is replaced by the green "Upload data file" button,
+   which in turn is enabled only once a prompt has been typed. */
 function igRefreshModeUI() {
   const mode = document.getElementById("igMode").value;
-  const addBtn = document.getElementById("igAddEditBtn");
+  const editBtn = document.getElementById("igAddEditBtn");
+  const dataBtn = document.getElementById("igAddDataBtn");
   const isEdit = mode === "edit";
-  addBtn.disabled = !isEdit || igState.editImages.length >= IG_MAX_EDIT_IMAGES;
-  addBtn.title = isEdit
+  const isBulk = mode === "bulk";
+
+  editBtn.classList.toggle("hidden", isBulk);
+  dataBtn.classList.toggle("hidden", !isBulk);
+
+  editBtn.disabled = !isEdit || igState.editImages.length >= IG_MAX_EDIT_IMAGES;
+  editBtn.title = isEdit
     ? `Add images to edit (up to ${IG_MAX_EDIT_IMAGES})`
     : 'Switch Generation Mode to "Edit" to attach images';
+
+  const hasPrompt = document.getElementById("igPrompt").value.trim().length > 0;
+  dataBtn.disabled = !hasPrompt;
+  dataBtn.title = hasPrompt
+    ? "Upload a CSV data file (one row = one image)"
+    : "Type a prompt first, then upload the CSV that fills its variables";
+
+  igRefreshInfoBubble();
   igRenderThumbs();
+  igRefreshStartBtn();
+}
+
+// Show only the explanation block matching the current Generation Mode.
+function igRefreshInfoBubble() {
+  const mode = document.getElementById("igMode").value;
+  document.querySelectorAll(".ig-info-mode").forEach(el => {
+    el.classList.toggle("active", el.dataset.mode === mode);
+  });
 }
 
 function igRenderThumbs() {
   const editWrap = document.getElementById("igEditThumbs");
   const refWrap = document.getElementById("igRefThumbs");
   const countEl = document.getElementById("igEditCount");
+  const isBulk = document.getElementById("igMode").value === "bulk";
 
   editWrap.innerHTML = "";
-  igState.editImages.forEach((img, i) => {
-    editWrap.appendChild(igMakeThumb(img, () => {
-      igState.editImages.splice(i, 1);
-      igRefreshModeUI();
-    }));
-  });
-  countEl.textContent = igState.editImages.length
-    ? `${igState.editImages.length}/${IG_MAX_EDIT_IMAGES}`
-    : "";
+  if (isBulk) {
+    // The same strip carries the CSV chip instead of image thumbnails.
+    if (igState.dataFile) {
+      editWrap.appendChild(igMakeDataThumb(igState.dataFile, () => {
+        igState.dataFile = null;
+        igRefreshModeUI();
+      }));
+    }
+    countEl.textContent = igState.dataFile
+      ? `${igState.dataFile.rows.length} row${igState.dataFile.rows.length === 1 ? "" : "s"}`
+      : "";
+  } else {
+    igState.editImages.forEach((img, i) => {
+      editWrap.appendChild(igMakeThumb(img, () => {
+        igState.editImages.splice(i, 1);
+        igRefreshModeUI();
+      }));
+    });
+    countEl.textContent = igState.editImages.length
+      ? `${igState.editImages.length}/${IG_MAX_EDIT_IMAGES}`
+      : "";
+  }
 
   refWrap.innerHTML = "";
   if (igState.refImage) {
@@ -4334,6 +4894,89 @@ function igMakeThumb(img, onRemove) {
 
   d.append(inner, x);
   return d;
+}
+
+/* CSV chip: same footprint and ✕ affordance as an image thumbnail, but a
+   document tile showing the file name, row count and live validation state
+   against the prompt currently typed. */
+function igMakeDataThumb(data, onRemove) {
+  const d = document.createElement("div");
+  d.className = "ig-thumb csv-thumb";
+
+  const inner = document.createElement("div");
+  inner.className = "ig-thumb-inner";
+
+  const icon = document.createElement("span");
+  icon.className = "csv-icon";
+  icon.textContent = "📄";
+
+  const meta = document.createElement("div");
+  meta.className = "csv-meta";
+
+  const nameEl = document.createElement("span");
+  nameEl.className = "csv-name";
+  nameEl.textContent = data.name;
+
+  const subEl = document.createElement("span");
+  subEl.className = "csv-sub";
+
+  const check = validateBulkData(document.getElementById("igPrompt").value, data);
+  if (check.ok) {
+    subEl.textContent = `${data.rows.length} row${data.rows.length === 1 ? "" : "s"} · ${check.vars.length} var${check.vars.length === 1 ? "" : "s"} matched`;
+    inner.title = `${data.name}\nColumns: ${data.headers.filter(Boolean).join(", ")}\nVariables matched: ${check.vars.join(", ")}`;
+  } else {
+    subEl.classList.add("bad");
+    subEl.textContent = "⚠ does not match the prompt";
+    inner.title = check.error;
+  }
+
+  meta.append(nameEl, subEl);
+  inner.append(icon, meta);
+
+  const x = document.createElement("button");
+  x.type = "button";
+  x.className = "ig-thumb-x";
+  x.innerHTML = "&times;";
+  x.title = "Remove " + data.name;
+  x.onclick = (e) => { e.stopPropagation(); onRemove(); };
+
+  d.append(inner, x);
+  return d;
+}
+
+/* Read the picked .csv and keep it only if it parses into usable records. */
+async function igHandleDataFile(fileList) {
+  const f = (fileList || [])[0];
+  if (!f) return;
+  const looksCsv = /\.csv$/i.test(f.name) || /csv/i.test(f.type || "");
+  if (!looksCsv) {
+    alert(`"${f.name}" is not a .csv file. Please choose a CSV.`);
+    return;
+  }
+  let text;
+  try {
+    text = await f.text();
+  } catch (e) {
+    alert("Could not read " + f.name + ": " + (e.message || e));
+    return;
+  }
+  const { headers, rows } = csvToRecords(text);
+  if (headers.length === 0 || headers.every(h => !h)) {
+    alert(`"${f.name}" has no readable header row.`);
+    return;
+  }
+  if (rows.length === 0) {
+    alert(`"${f.name}" has a header row but no data rows.`);
+    return;
+  }
+  igState.dataFile = { name: f.name, headers, rows };
+  // A different dataset invalidates the "already generated" marks.
+  igState.bulkGenerated = new Set();
+  igRefreshModeUI();
+
+  // Surface a mismatch immediately rather than at Generate time.
+  const check = validateBulkData(document.getElementById("igPrompt").value, igState.dataFile);
+  if (!check.ok) alert("Data file loaded, but it does not match the prompt yet:\n\n" + check.error);
 }
 
 function igReadFile(file) {
@@ -4483,7 +5126,9 @@ function igRenderGrid() {
     const label = document.createElement("div");
     label.className = "label";
     label.textContent = item.name;
-    label.title = item.name;
+    // Bulk cards keep the gen_<Model>_<n> name (it is also the file name) and
+    // surface the row's own value on hover so rows stay tellable apart.
+    label.title = item.rowLabel ? `${item.name} — ${item.rowLabel}` : item.name;
 
     const btns = document.createElement("div");
     btns.className = "btns";
@@ -4565,15 +5210,32 @@ function igUpdateStatus(msg) {
   document.getElementById("igStatus").textContent = msg || "";
 }
 
-/* ---------- generation flow ---------- */
+/* ---------- generation flow ----------
+
+   Generate button. Bulk mode does not fire immediately: it opens the entry
+   picker so the user chooses which CSV rows to spend requests on. Every
+   other mode starts straight away. */
 async function igRunBatch() {
   const cfg = igReadConfig();
   if (!cfg.prompt.trim()) return;
 
-  const editMode = cfg.mode === "edit" && igState.editImages.length > 0;
+  if (cfg.mode === "bulk") {
+    if (!igState.dataFile) {
+      alert('Bulk mode needs a data file. Click the green "Upload data file" button and choose a CSV.');
+      return;
+    }
+    const check = validateBulkData(cfg.prompt, igState.dataFile);
+    if (!check.ok) {
+      alert("Cannot start — the data file does not match the prompt:\n\n" + check.error);
+      return;
+    }
+    openBulkModal(cfg, check);
+    return;
+  }
 
-  // One result card per source image in Edit mode, otherwise a single card.
+  const editMode = cfg.mode === "edit" && igState.editImages.length > 0;
   if (editMode) {
+    // One result card per source image in Edit mode.
     igState.items = igState.editImages.map(img => ({
       name: img.name.replace(/\.[^.]+$/, ""),
       source: img,
@@ -4589,7 +5251,36 @@ async function igRunBatch() {
       variants: [], activeVariant: 0, total: cfg.variations
     }];
   }
+  await igStartGeneration(cfg);
+}
 
+/* Build one card per chosen CSV row and run them. */
+async function igRunBulkSelected(cfg, check, rowIndices) {
+  const data = igState.dataFile;
+  const firstVar = check.vars[0];
+  igState.items = rowIndices.map(rowIdx => {
+    const row = data.rows[rowIdx];
+    const varValues = {};
+    check.vars.forEach(v => { varValues[v] = row[v]; });
+    return {
+      name: bulkCardName(row, data.headers, rowIdx, cfg.model, firstVar),
+      source: null,
+      prompt: applyRowToPrompt(cfg.prompt, row, data.headers),
+      varValues,
+      bulkRowIndex: rowIdx,
+      rowLabel: String(row[firstVar] || "").trim(),
+      status: "pending", loading: false,
+      variants: [], activeVariant: 0, total: cfg.variations
+    };
+  });
+  console.log(`[IG bulk] ${igState.items.length} row(s) x ${cfg.variations} variation(s) = ` +
+              `${igState.items.length * cfg.variations} request(s)`);
+  await igStartGeneration(cfg);
+}
+
+/* Shared runner: renders the queue, works it with the concurrency pool,
+   and records which bulk rows succeeded. */
+async function igStartGeneration(cfg) {
   igState.running = true;
   document.getElementById("igStartBtn").disabled = true;
   document.getElementById("igResetBtn").disabled = true;
@@ -4617,8 +5308,177 @@ async function igRunBatch() {
 
   igState.running = false;
   document.getElementById("igResetBtn").disabled = false;
+  // Remember which CSV rows produced an image, so the picker can show them
+  // as already generated in this session.
+  for (const it of igState.items) {
+    if (it.status === "done" && typeof it.bulkRowIndex === "number") {
+      igState.bulkGenerated.add(it.bulkRowIndex);
+    }
+  }
   igRefreshStartBtn();
   igUpdateStatus(`Done. ${igState.items.filter(i => i.status === "done").length} / ${total} succeeded.`);
+}
+
+/* ===========================================================
+   Bulk entry picker
+
+   Shows the loaded CSV as a table, one tickable row per entry, so the user
+   confirms exactly which rows to spend requests on. Rows already generated
+   successfully this session are tinted green but stay selectable, so an
+   entry can deliberately be regenerated.
+   =========================================================== */
+let bulkModalCtx = null; // { cfg, check }
+
+function openBulkModal(cfg, check) {
+  bulkModalCtx = { cfg, check };
+  // Default selection: everything not yet generated. If all are done,
+  // start empty rather than silently re-charging for the whole file.
+  igState.bulkSelection = new Set(
+    igState.dataFile.rows.map((_, i) => i).filter(i => !igState.bulkGenerated.has(i))
+  );
+  renderBulkModal();
+  document.getElementById("bulkModal").classList.add("visible");
+}
+
+function closeBulkModal() {
+  document.getElementById("bulkModal").classList.remove("visible");
+  bulkModalCtx = null;
+}
+
+function renderBulkModal() {
+  if (!bulkModalCtx) return;
+  const { cfg, check } = bulkModalCtx;
+  const data = igState.dataFile;
+  const vars = check.vars;
+  const firstVar = vars[0];
+
+  document.getElementById("bulkSubtitle").textContent =
+    `${data.name} — ${data.rows.length} entr${data.rows.length === 1 ? "y" : "ies"}, ` +
+    `${vars.length} variable${vars.length === 1 ? "" : "s"}: ${vars.join(", ")}`;
+
+  // Extra (non-variable) columns are shown for context but greyed in the head.
+  const extraCols = data.headers
+    .map(h => String(h).trim())
+    .filter(h => h && !vars.includes(h));
+
+  const table = document.getElementById("bulkTable");
+  table.innerHTML = "";
+
+  const thead = document.createElement("thead");
+  const htr = document.createElement("tr");
+  const thCb = document.createElement("th");
+  thCb.className = "cb";
+  thCb.textContent = "";
+  htr.appendChild(thCb);
+  const thName = document.createElement("th");
+  thName.textContent = "Output name";
+  htr.appendChild(thName);
+  for (const v of vars) {
+    const th = document.createElement("th");
+    th.className = "varcol";
+    th.textContent = v;
+    htr.appendChild(th);
+  }
+  for (const c of extraCols) {
+    const th = document.createElement("th");
+    th.textContent = c;
+    htr.appendChild(th);
+  }
+  const thStat = document.createElement("th");
+  thStat.className = "badge-cell";
+  thStat.textContent = "";
+  htr.appendChild(thStat);
+  thead.appendChild(htr);
+  table.appendChild(thead);
+
+  const tbody = document.createElement("tbody");
+  data.rows.forEach((row, i) => {
+    const tr = document.createElement("tr");
+    const done = igState.bulkGenerated.has(i);
+    if (done) tr.classList.add("done");
+    if (igState.bulkSelection.has(i)) tr.classList.add("selected");
+
+    const tdCb = document.createElement("td");
+    tdCb.className = "cb";
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.checked = igState.bulkSelection.has(i);
+    cb.addEventListener("click", (e) => e.stopPropagation());
+    cb.addEventListener("change", () => {
+      if (cb.checked) igState.bulkSelection.add(i); else igState.bulkSelection.delete(i);
+      tr.classList.toggle("selected", cb.checked);
+      updateBulkCount();
+    });
+    tdCb.appendChild(cb);
+    tr.appendChild(tdCb);
+
+    const tdName = document.createElement("td");
+    tdName.textContent = bulkCardName(row, data.headers, i, cfg.model, firstVar);
+    tdName.style.fontFamily = "ui-monospace, SFMono-Regular, Menlo, monospace";
+    tdName.style.fontSize = "11.5px";
+    tr.appendChild(tdName);
+
+    for (const v of vars) {
+      const td = document.createElement("td");
+      td.textContent = row[v] || "";
+      td.title = row[v] || "";
+      tr.appendChild(td);
+    }
+    for (const c of extraCols) {
+      const td = document.createElement("td");
+      td.textContent = row[c] || "";
+      td.style.color = "#9ca3af";
+      tr.appendChild(td);
+    }
+
+    const tdStat = document.createElement("td");
+    tdStat.className = "badge-cell";
+    if (done) {
+      const tag = document.createElement("span");
+      tag.className = "bulk-done-tag";
+      tag.textContent = "generated";
+      tdStat.appendChild(tag);
+    }
+    tr.appendChild(tdStat);
+
+    // Clicking anywhere on the row toggles it.
+    tr.addEventListener("click", () => { cb.checked = !cb.checked; cb.dispatchEvent(new Event("change")); });
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+
+  updateBulkCount();
+}
+
+function updateBulkCount() {
+  if (!bulkModalCtx) return;
+  const n = igState.bulkSelection.size;
+  const v = bulkModalCtx.cfg.variations;
+  document.getElementById("bulkCount").textContent =
+    n === 0
+      ? "No entries selected"
+      : `${n} entr${n === 1 ? "y" : "ies"} selected — ${n * v} request${n * v === 1 ? "" : "s"}` +
+        (v > 1 ? ` (${v} variations each)` : "");
+  document.getElementById("bulkStartBtn").disabled = n === 0;
+}
+
+function bulkSelectAll() {
+  igState.bulkSelection = new Set(igState.dataFile.rows.map((_, i) => i));
+  renderBulkModal();
+}
+
+function bulkClearSelection() {
+  igState.bulkSelection = new Set();
+  renderBulkModal();
+}
+
+async function bulkConfirmStart() {
+  if (!bulkModalCtx) return;
+  const { cfg, check } = bulkModalCtx;
+  const rows = [...igState.bulkSelection].sort((a, b) => a - b);
+  if (rows.length === 0) return;
+  closeBulkModal();
+  await igRunBulkSelected(cfg, check, rows);
 }
 
 /* Generate every variation of one card. Variations are independent requests
@@ -4637,12 +5497,15 @@ async function igGenerateOne(idx, cfg) {
     try {
       const res = await callImageGen({
         modelKey: cfg.model,
-        userPrompt: cfg.prompt,
+        // Bulk rows carry their own substituted prompt; other modes use the
+        // prompt exactly as typed.
+        userPrompt: item.prompt || cfg.prompt,
         mode: cfg.mode,
         quality: cfg.quality,
         aspect: cfg.aspect,
         editImage: item.source,
         refImage: igState.refImage,
+        varValues: item.varValues || null,
         onRateLimited
       });
       const cost = recordImageCost(cfg.model, cfg.quality, res.openaiSize);
@@ -4857,6 +5720,10 @@ document.querySelectorAll(".key-edit-btn").forEach(btn => {
   });
 });
 document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && document.getElementById("bulkModal").classList.contains("visible")) {
+    closeBulkModal();
+    return;
+  }
   const previewOpen = document.getElementById("previewModal").classList.contains("visible");
   if (previewOpen && (e.key === "ArrowLeft" || e.key === "ArrowRight")) {
     e.preventDefault();
@@ -4877,8 +5744,10 @@ document.getElementById("igCostReset").addEventListener("click", resetCostCounte
 document.getElementById("igBalanceAmount").addEventListener("click", promptSetBalance);
 document.getElementById("igSaveConfigBtn").addEventListener("click", openSaveModal);
 
-document.getElementById("igPrompt").addEventListener("input", igRefreshStartBtn);
+// Typing gates the green button and (in bulk) re-validates against the CSV.
+document.getElementById("igPrompt").addEventListener("input", igRefreshModeUI);
 document.getElementById("igMode").addEventListener("change", igRefreshModeUI);
+document.getElementById("igVariations").addEventListener("change", igRefreshStartBtn);
 document.getElementById("igModel").addEventListener("change", () => {
   igPopulateQualityDropdown();
   igPopulateAspectDropdown();
@@ -4909,6 +5778,22 @@ document.getElementById("igEditFileInput").addEventListener("change", async (e) 
 });
 document.getElementById("igRefFileInput").addEventListener("change", async (e) => {
   await igHandleRefFile(e.target.files);
+  e.target.value = "";
+});
+document.getElementById("igAddDataBtn").addEventListener("click", () => {
+  document.getElementById("igDataFileInput").click();
+});
+
+/* ---------- bulk entry picker ---------- */
+document.getElementById("bulkSelectAllBtn").addEventListener("click", bulkSelectAll);
+document.getElementById("bulkClearBtn").addEventListener("click", bulkClearSelection);
+document.getElementById("bulkCancelBtn").addEventListener("click", closeBulkModal);
+document.getElementById("bulkStartBtn").addEventListener("click", bulkConfirmStart);
+document.getElementById("bulkModal").addEventListener("click", (e) => {
+  if (e.target.id === "bulkModal") closeBulkModal();
+});
+document.getElementById("igDataFileInput").addEventListener("change", async (e) => {
+  await igHandleDataFile(e.target.files);
   e.target.value = "";
 });
 
