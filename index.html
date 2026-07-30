@@ -16,8 +16,10 @@
   header {
     background: #111827;
     color: #fff;
-    padding: 14px 24px;
-    font-size: 18px;
+    /* 50% taller than the original 14px vertical padding */
+    padding: 21px 24px;
+    /* 50% larger than the original 18px title */
+    font-size: 27px;
     font-weight: 600;
     letter-spacing: 0.3px;
     display: flex;
@@ -29,6 +31,25 @@
     display: flex;
     align-items: center;
     gap: 16px;
+  }
+  /* Clickable app icon to the left of the title */
+  .header-icon {
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    border-radius: 8px;
+    transition: transform 0.12s ease, background 0.12s ease;
+  }
+  .header-icon:hover { transform: scale(1.07); background: rgba(255,255,255,0.10); }
+  .header-icon img {
+    width: 40px; height: 40px;
+    display: block;
+    object-fit: contain;
   }
 
   /* ---------- Hamburger + side menu ---------- */
@@ -1251,6 +1272,7 @@
 <header>
   <div class="header-left">
     <button type="button" id="menuToggle" class="menu-toggle" title="Toggle menu">☰</button>
+    <button type="button" id="headerIcon" class="header-icon"><img id="headerIconImg" alt="" /></button>
     <span id="headerTitle">Image Generator <span class="version-tag">V3</span></span>
   </div>
   <div id="configsWrap" class="configs-wrap">
@@ -4482,10 +4504,37 @@ function saveSettings() {
 // it, so this must agree with the initial `active` classes in the HTML.
 let currentPage = "imagegen";
 
+/* App icons, embedded so index.html stays a single self-contained file
+   (the source PNGs live outside the published repo). */
+const ICON_PEN   = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAYAAADimHc4AAAAAXNSR0IArs4c6QAAAJhlWElmTU0AKgAAAAgABAEaAAUAAAABAAAAPgEbAAUAAAABAAAARgEoAAMAAAABAAIAAIdpAAQAAAABAAAATgAAAAAAAABIAAAAAQAAAEgAAAABAASQBAACAAAAFAAAAISgAQADAAAAAQABAACgAgAEAAAAAQAAAGCgAwAEAAAAAQAAAGAAAAAAMjAyMzowODozMSAwODozNToxMgAuIey/AAAACXBIWXMAAAsTAAALEwEAmpwYAAABsGlUWHRYTUw6Y29tLmFkb2JlLnhtcAAAAAAAPHg6eG1wbWV0YSB4bWxuczp4PSJhZG9iZTpuczptZXRhLyIgeDp4bXB0az0iWE1QIENvcmUgNi4wLjAiPgogICA8cmRmOlJERiB4bWxuczpyZGY9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkvMDIvMjItcmRmLXN5bnRheC1ucyMiPgogICAgICA8cmRmOkRlc2NyaXB0aW9uIHJkZjphYm91dD0iIgogICAgICAgICAgICB4bWxuczp4bXA9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8iPgogICAgICAgICA8eG1wOkNyZWF0b3JUb29sPkFkb2JlIFBob3Rvc2hvcCAyMS4yIChXaW5kb3dzKTwveG1wOkNyZWF0b3JUb29sPgogICAgICAgICA8eG1wOkNyZWF0ZURhdGU+MjAyMy0wOC0zMVQwODozNToxMjwveG1wOkNyZWF0ZURhdGU+CiAgICAgIDwvcmRmOkRlc2NyaXB0aW9uPgogICA8L3JkZjpSREY+CjwveDp4bXBtZXRhPgpNgptMAAAUVElEQVR4Ae2ce3Qc1X3Hf3dmdlfPXa20esuWjRsaHnVw3bg09BDDIcTp4wQaSlJICsc8WgKBOjmn5TQ9jXvyB+1paoPDI7xqUkgAHx5NoAkpr8AJjU0B2zgGbEmWJSRZj32/d3Zmbr+/O7vGcW3HRrIsiVm42vXu7Er6/L7z/f3u794RkXc7ZQSklOKUfXPvG3sEPAIeAY+AR8Aj4BHwCHgEPAIeAY+AR8Aj4BHwCHgEPAIeAY+AR8Aj4BHwCHgEPAIfBQLemuRRoizjZy22ivEzDU0rU83St0TTLxJHOXRaT3sBOAK+1L7em6Qsf8uRWkTIMuk+u18z6r7d0DP0MJGQR3jLh37KC8Bh6KJ9p90qybnNsnQiPMAgXSPN0C0pamvXhxe9++2ZDIJ22Pf/yPzz5d0vN7y8e3eDlFtAmm9SxPuW3EqavM2yfUSaLoWmC9I0YUtNlswaYeX0f5oauHwdH+u+Z/pfZ+yDpv+jzM4nbNz0rxf5A/VfT2Xyp/f3D4vxieg77e2nbfz3b96/Kmv5bsuXayFwQ7LyJQ8HDzFIDQKvkK3Vr/x6x2/dcycOdKb7U3+kAnDV2qtubG5u/s7URKJm9P0DFIvGwVWSv67OvOziuHnl50frwu0RUSwHQB7MFXy4kO2Qo4bN90I3WiwjeMb1ncse2ewF4DgJXLzm4pu7urs37B8Y00eGxyTDrakNUGtrhOrr68VENE3hhhHnH26cpE+uiohcqRYBYPgM3SLbKrsDgRCChB4Ip+tCvZ9uW/qTHcf5IxzxsIr/HfG1BfPkuZ8694bOru6N+/pGjaH9o3AUSYbPR7V1dRQKBamjo5MW93RR2YmIZ1/SRHP9KJ15ukFl5ALHcQPg2AgABwL3FkbAl6spO9nx2+9OvDIdUMZ03jwf3rty1cprexb13j7YN+obHZ2QmqaRD/Dr6uop1BSmJgwORE1NDS3FfQ8C8cBTrVQovk6XfK5MefIhF1gIBIbFo6wel4sW6Y4emi6DBR2AT6xYsXbJ0mXfHRoY848xfF134dc3UFM4TJFIhFowgo1B0g2DrLJFVDbp7LN+l374M+QBsV3+8YVZYUkN4HEmYNhltiITx+KxId7wAnAUAitWrrhhce/SjUP9BwIMX1fw/VTH8KH6ttZWamuL4CxookCgRn2KZUtKpTPK+xf1LKafbAsLn7HNOX/lfs0pE1klgMfQLEskc7XP6qFV/0n0zFF+guN7ekHmgOXnnHNLV8+ijWPDUf+BA1MufL8fyZaV30Rt7W3UjsFnAVuRBvWbUH88GqOh/UO0f3CQyuUSXquj4egy0ssTclHzuCjmYD8FW6RjgZ+Z4uNXnvfFVzPHh/noRy24APz2mWfe3NnV828TozFjciIO+PD8CnxWe2tbK5JuO4UZfn09rMdPFnx9anKSBgYGaGTkfYrFYzQ1NQk3KlItKqS9I91kZUapN5jRktGaX2TFJy/77PWvJ4+O9fhfWVABWLps2U2tHd0b4pNpIxZNSp0TLuCz7Sj4KDk7OtqouaUFYBsA3wf4Fk1ORql/bz8NDw9RJpMms1SkYrFIqVSSivksBWobxNv7wsLOZgcvWnHa51de9fr48SM+9pELZiLWs2TJzS2Rzg3FbFnPpDIKPpearuc3UaQCv6UFdX9jo4JfRkKdmozR3vfeo337+iidTinrUTU/6n8bJaiuCSTrZmrv6haFQnF/1qLfH3j7fyaPjfX4X10QZ0B719KvNQbDG4s5U89n8oCvo86H8uHhwWBQVTpsOy2RFqpvCKqzwkJFE52KUX9fH+D3UzqVQB4oqTrf4ckX4GO2pmr/fD5PpWKeNCHDZObG4vHY1uNHfOwj53kzTopnNrdf0dOhbUjFTb2QK6g63/C7k6wGlJfNLc1Iuq3KduobGsmAJZWRcKdgO3179tC+gT5KJeNUgt9zeWnDknjCxUGQlSBwjognEgjYFOUKuTOOjfTEXp3H8wApErvDVwd8mbs72hLarbc1O9vfaRLBoKt8Bb8Z5WY7lM+2EwR8X0DBjwK+sh2GD+WXSgVX+TzrVQMtCMmDu3Hcl5MIjE3ZHCZfetA8McTHPnqeWpALXxfpe0uWFohEBK25sCQmp3TaP9pCTc1N1NLMym+H97dSYygE2wmoiRbbTt9eKL+/j5JQvgnlW1C+Cx6qZ/DcA2L4jL56r8IgRSgcujOTSr19bKzH/+o8DADg7wx/RdPS95Wl8DtkSMvxUaAmQJ85XwCYn0YmFinw7PkNyAH+AODDWqJIuH3w/MH+fsCPodopqL6OajNUlI8PwP//PwCOdITfH9j7B+eu+lt8RvH4ER/7yHkWAMDfEf6yZqTuB/wAwyfNR0ILAFoNWpQNdO5KH9XXBWg0ukj1erjHw37Oyt+7Z29F+THXdg5RPgAr8G4A3CConjS3pckRhmHEe3t7rti6deueYyM9sVfnUQCwYrUrdKVuZB5g+LbkFSusXIkAAlCLFnE9TCKI/n4rnfGxOqqvdWh4vJVsLF7FkDz79kL5+wYolYDyTXj+4fBhO67l/Lr6YUGAr6cW9y76Cyj/pRPD+5uPnicBkCK1M/QlTc8+aEpRo5QvUD8IP+BD+YBPgE/UAv9uga20UG83Gm96lF7blqP+/kF6f2jgoO1wS9ktMyvlJvs8nwGHer5rRVh80TNdXZ1XDA4O/vQ34zzxI+ZBAKRI7mr6c9Kzmy2Hah0J21HwoX6C+qkKvxnqjwBhCCxR7ZiSelrHySnuoh/9dIqSKUyyWPkMn+t8WSkzK55/MOHyv93/BNoYebQuvjIyMjK9jtsx4jLH5wGAv7PpC5Iym9GprGXbceFz9ewHszpYdiOAh6HoFowQ4AZgL1g0KY1RPtVPF/3efrrp8gEql3IoQRk+anz091WNf5jvK/8HfHywQBujgCR+9ejo6I+OwW/aL83hM0CKzK7wpfj6fVvKegVfY/Cu7yv4ynagevi+xCSVlW9bJXLMUbJLe8kujlMJs9izlxSoqbZEP39TR3uhYjfVSqei+Cp8qF/Bx+Tt6rGxsSeEmNl9QIdHbM4GILHjjksdkX4YZlFvVZQv4PmcdEnWQqfwfAW+HVUKe78fCyYMf6QC/wAe58k2y4Rqk36n16FgjUWv7tTAmlVeSbbVAOAZlJ/s+aX2jrZrYDuPn2z4HIw5GYD4zvCfCpF+BGbR4CofPyYnXHg+UY2CL2UbgLVjwPuhfMcqKuU7pX4EYALg4fcmPgHzVrtEKgjLexyqwU6SX77r9iAxa1D/4UP4Hp6vm51dHdcPDw//YDbgz8kApN5sXkMi9UNLOEEsBcLzdVQ6bsJl+ETwfAbvdOGefR/wy3lySiMYgG+OY0D5WDLkVSyGz8PBWYA0QMu7sd3NkvTmILY2qDgAPUpNzdCsju6uG4aHhr4/W/DnXACSO5ovllryUei2ScFHV5OTrmDbUfAbAIuV343RCviwnXIOgIeg9H48BvxyAfeAjyrIhvodho9hIQCIExWyRGe3Iq3j8Tuqqw/lG7rd2dnxtWuH1j54gbiA/WnWbnOmGRd7s/mzDiUftYUTthxX+ariQbXDs1yiBph0FX6kovwsIAN+uQ/gJwGd4aOFXIbKK+BZ/XAnQpwIL2OBBUHA4z/5GNHwhBTbpzQH8G+B7dwH5U97p9uJRm5OBADw15CWfAzwQx/A5/TE1gPPR6lJBPiwHVK2wwk3A/j7AR3VjjlVge/azq/BrygfrqTg53AGpNICkzIS5zQJe9wJ/eM1w8P3nAr4HKxTviI2tb1pta6ln4TtNPMmWPZ8NdR+HLYernY6DtoOl5qOBdsxBwF9APdV5VfgV5KuDdWz7ZhQO1dBRdznMdKAH0sIEUtquZjWct3mt8Yfg8fNqu0w+OrtlJ4BibeaPo1S83GgY/jY84fdyBwA4h+LJ1of2A73eNiKnHKWJMBLsw+PYwgCVz/4BGzp4YpHDdgOB4A9vwo/B/gZ7GFIQPnxlJbL6K1/ufmtsadPJXwOwikLQGJH0wXQ4xZHOJGyrfHs5wP4aCnLw+Gragd7dsx9JJXnR6F+rGKZqOdR7XDFo0rOivKRiw96fg6ByMB6kkkoP2XkM0bkqnvfAPwZvtiCgZ7o7ZQEIL0j/Ic2pbbA8yOWLVADckcEypesfoYPz68kXFa+W2pmSJYGAJqrnSgWV6B8TrYV8FX4nHTxEmbASLYYmAi7yoftJFK+fFZvvep7b4w8NRfgc7BmPQDRHcFVFiWhfAnlw3sFw68GALZzsNrpQc8Gs1wHu5TLKVXjs/XYVhT/xgrWofDZcirVDlc8XO9ztcPw0xmB9Vxi+MWiv33t3VuHn5wr8Gc9APE3w8slJZ9AldlpWh/AF0r97Pno6Suv70ajoO0gfLu0B57Pyk/A6xk+Dj1U+QwflqPgAzqXmSrhMvw4IeEaBcvftfaOrYNb5hJ8DgCf87Nym9ja1m7LxLOaTy5DhwArWRXVq5OQy00kXIdbCz1kE6oeKN+20gAP+Mp2XPjoJqsAHJps7Sp8gGfb4VITWzwJGxlENOErWf7utbe/Pvj4XIPP4JnCrNzK+cyVhuacgQ1nsB3+lvzF9XxV7Tg8yarYjl2DyVQStrMXYx+SKx6jxczwWfkS1Q4PrvdVuQnb4TqffZ+Vr6odwJ+KG6VCoPM6wH9sLsJnCrMSAO61mGb5jwAftgJ4qurmAHAKYtthuwF8nAGu50PtgK+SronLiOD5anZ7qO3gs9QMF+pn8DxUtVMpNacSRqlY03XtXduGHpmr8DkAs5KEo88v7hTknIP1EKV7zrtofqEER1uZV7Ec7u10AD7qfIuVD7/nWh9ngVq7RfPsYLUD1bP9VOFXZ7juJMut8+H5phnouu7ObUM/mMvwZy0ARSe+2ud3WrhkJ54wVSxIaHUICFsPD57hJmAtA6gjBwEfZwGvYAE+FrCU9VQtR5WaXOfnhVvt5Hhfvws/mjTKBV/nX2+a48pn+Hw76RYkt+A6XFG6Vkkf1oPtN8rLrVKlaWYZuBCOFT4J+P0Y+/GYE+4H8KsJVwUAZ0C5IFz41WoH8LnUjKf0csnX8dVN24YfmuvKV/TxRWmx+o+TcT/xQuMltsg8Cd6CvZ/tX6UAVEEaLrHStC78EI0IDDqZ6OvY5UM8v9pe4GSLYRWFO8kC+GpvJ5OV6O0AflK3TF/nVzdsff+B+QKfeZ/UAEy+fFaDae55TRjW8jLv+uMzgEe16Ys1Xo339fDsFy+4vfxKwmX4yBlc5TB81dtBADjZMny3tyMpkUKpGdct2M6Nm7a9f/98gs8BOKlJ2C7t+yuf31peKLui56+q4w4bYiuSfOUhkoIQeTzm52BFAI+NC8rzeUGlWma6jTUJzxduewG1Pnc1pxK6XdDab75rHsI/qWdA/pVli5LFwf9Fv6cd1zYjkzJwV/3VPKDqesBW4eHXq8dwgLjSUbbDno8yE4PbCwUEIIMzgG1nMqbbGWq75b4do/dUQsu/07y6naQzAPt58jXfNPxOu2mi5cB/24Lrf9gMB0FyZVOdSAGyai3w2cEBYHw4hs8CDgCvYjF8HqqxBvhxtJRhO05Wtqy7b+fo3fPNdg5VyEnJARP/HT7PdpIvgrPf4ZoTAXAtBmzZZrBeq9RdkErdyuN5kgXluxHAHSKBtg+h44zrtQAfAciy8lOwnZgmC9S87u4dk5vmM3wOxIyfAbLvc4Gxvuf/RTNkwDGxwlWB7yqf1S7Qw2dvR9IFVNVEwz2uDlLDtjBl49MAEeBkjYtZqIjXcjgmkSYxAfhpO/yNB3fNf/gnJQCT/a9cY/is8wqwnqqnSxtQAVJVNbxbgdsIAMoTKTMvlc3wY+5i4gJF/I0GBAhnjmT3wk+J5h1lCoCf0J2EE/7GQ7um7pjvymf4fJtRC4q+2NNdMse2YT99N5SMC00AkRWNwQnXLsF6lOpd6CXU8CUEgCubQlagi4mBWW2BrQdWxY7EDmY52B1d1J20iKx7+O3x7y4U+ByAGbQgKUqmf73hc7oLBRiISrYACPUq8LARhs/lJKu9BNBFlJJ5QOeRRe8+zW1kvJYpSpHFmVLAe3EtAJnCl/GFO259avfw9xYSfA7AjJ0Bk88F19iUecbERk7noOUIlUiV6gFe1fI5hg/wGUnZNDZI8RYRbiWksRkRz2cQqDS2xRVIGzGF8bbjC7zqD3f914u7f/XuQoM/Y2fAFvR7LOuKv0fiNVDJ8PxKJdtqx5LB88aoEpReQLs4B+C4CB0LJoKimMnGOQDo7xSEf4dtBJ6QTcGX6s9e8e7zTz+NtIup2xj/xcgZ0wr/3nPmNiO/Fff7n7+t5omzzyz9WRGTLquoqUTLCZbVbgJ6CcovpDVcIoRSMubQJJYKpxCEWAFtBOF/oVwfute8+vrnfr5+PdLwR+c2IwFYvXp1w7Zt259f/8XcuVeusWQaSlcJlj0e6mbwuZRGyZigA5MO2geSJvN6PqfV/tiub7rruX8e+iVdLjjnfuRu0w4ASk3RGGreYFna3/gNIb91aUqu+YQpklB6FgrP4D4V0/DXRzQxFiWayItoSat91Il0PvDjy977Fa2f/f2YcynK0w5AKNT2hbJlbcHfZtBQLUqnlJJ/95kifarLEaNjqN2xA3k8atBkwTeY0Wr/w2xb/NBzO7YPLcSE+mECO60AdHQsWYI/7/Kapvu6uNlQKKZxIRwuXcd1dF/+uKRGJN+JjG9Pzhe8M3fG8kdffPGFuAf+w4TpCO9Zv369FmyIPNrQ0CrrG1pswwg4QujSMHzlYCi8pberd+3F7e0XXrL6kqYjvN17aroEVq5c6autDb1bUxOSuhEAeL/d2Bh8ZunSpeejKpq1/UbT/T3m9fvD4ciX6uoa32kMNT192mmnX+SBPwXhXLduXS3An/TF/VPwq3nf0iPgEfAIeAQ8Ah4Bj4BHwCPgEfAIeAQ8Ah4Bj8BCIsBLuf8HphaQNnbzGkMAAAAASUVORK5CYII=";
+const ICON_IMAGE = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAYAAADimHc4AAAABGdBTUEAALGPC/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAAYmVYSWZNTQAqAAAACAACgpgAAgAAABIAAAAmh2kABAAAAAEAAAA4AAAAAGVtb241NTU1L1ZlY3RlZXp5AAADoAEAAwAAAAEAAQAAoAIABAAAAAEAAABgoAMABAAAAAEAAABgAAAAABYQl5wAAAJMaVRYdFhNTDpjb20uYWRvYmUueG1wAAAAAAA8eDp4bXBtZXRhIHhtbG5zOng9ImFkb2JlOm5zOm1ldGEvIiB4OnhtcHRrPSJYTVAgQ29yZSA2LjAuMCI+CiAgIDxyZGY6UkRGIHhtbG5zOnJkZj0iaHR0cDovL3d3dy53My5vcmcvMTk5OS8wMi8yMi1yZGYtc3ludGF4LW5zIyI+CiAgICAgIDxyZGY6RGVzY3JpcHRpb24gcmRmOmFib3V0PSIiCiAgICAgICAgICAgIHhtbG5zOmRjPSJodHRwOi8vcHVybC5vcmcvZGMvZWxlbWVudHMvMS4xLyI+CiAgICAgICAgIDxkYzpyaWdodHM+CiAgICAgICAgICAgIDxyZGY6QWx0PgogICAgICAgICAgICAgICA8cmRmOmxpIHhtbDpsYW5nPSJ4LWRlZmF1bHQiPmVtb241NTU1L1ZlY3RlZXp5PC9yZGY6bGk+CiAgICAgICAgICAgIDwvcmRmOkFsdD4KICAgICAgICAgPC9kYzpyaWdodHM+CiAgICAgICAgIDxkYzpjcmVhdG9yPgogICAgICAgICAgICA8cmRmOlNlcT4KICAgICAgICAgICAgICAgPHJkZjpsaT5lbW9uNTU1NTwvcmRmOmxpPgogICAgICAgICAgICA8L3JkZjpTZXE+CiAgICAgICAgIDwvZGM6Y3JlYXRvcj4KICAgICAgPC9yZGY6RGVzY3JpcHRpb24+CiAgIDwvcmRmOlJERj4KPC94OnhtcG1ldGE+Cm1L+vAAACzqSURBVHgB7Z0JkGZXdd/Pe+/bu79eZqZn04wGEEsQYNYSGMqxSVw4doAyEBIqZRdVocohslMRSpyyCxdMQoHjOAmVqgABx0lAcRapSIBUYRtDWQgQQQgkNmHESCAJjWamp7unp7dvfS+//7n3ff3NaJavB6jC5b5fv/fucu65555zl3PPve+12a7b5cAuB3Y5sMuBXQ7scmCXA7sc2OXALgf+qnEg+XFWuLj99uxf/OCNs4u5tfvWaw4Lq6i8VmJ5t2f5MKkNkooNK4NOUW818nS4NewO8mErKfLpZDrv9G3Y6J4r9uzJ8ywb5gvdheF0xfJjyw8UN/7sjbl99s5A/rfeX9gddxQEdBmV8mdI/Mm+/8gFcPz4ydY3sr2v2rLs1f0kfdHA7NDQbDpPrAYrUrHDGZQXMCnJE4SRJlYoDj+gNlRcUjgTByQVaUo4SYbEgC4hvRimVoDSYYlOBiDrg3xA9BBBA+eX8A2AHWRJ0bM07QlPOiyGENFTGoV2kHcXXH0o8ivJ0kGlGPYpt5/nNsDTpeV0K2mx3sgq56tpb3lPtnX6d2+eO+d1AdG1OvL/6Nxrf3vt9Ru11js3s/SnxI1hDm44k4vVsZjy6cGxACAOpChJw5PG0kcIAphLB0G500P5LxUu40aAgvPANryCZZw88o/CIC7poVFYqispugAsVdP8oWZW3DWXFh+77R/X7o1od/QYlbOjXBcBQ1PyC7+18a7ztcbbu1lKu45NvYSjFMlChXkXKOPJ6I4E9YfSH32BESWF5bOECyx35oj9if9CGSOGxXjhK7xLCWqbufKHjlYiV+KoAALBOXZAHJ6bd1dVJCOOrpENrd9MBv932jq/83/e1v52mW+S51jJk4BfGuZv3rL+22szU+9RP9Yg762OejB8eEBV0iWaVT/5y7ug9Ke4kpgyfxnh8c6YCOEIIpbYxBnG3IVHSFOEwmK7mFa67UYg1pZOPvJtR3iCC5Y4RXtSTFcJKlp4cxDmdSKG+Zl60X/zZ25t/IlnnuAW0U0AeRmQX/q1Uy9dnNv32V4jq9Mg6J4BMPLFAxqCNEh7kiiXK+HG/YIhPiaNhhRnWIwsswtoBLeNziMl+BKO/qgSLnBPjgnJzC0BqTIDpLyCHa+LQ3pkAFVY6VXGpn4tsS0rzjeH3Vd/5tbm5xz2KjehumZHNZOX//rGJzf3Tf2tTLRHbP7gpjmgzzTYrg5soXbKpmprVkuZ1fLMhgVTY6FnxhzBRZw/6dcD+hFTr4cFlxOXCx6W5LCEmdNpVnka2sqGK76VYXHO+chNTzmnL4YvoDUkO0eF2S9uakxZvNQIvFjC/I1g5ZVj5LUG3b9HT1jv5A9e30xf9t9vTlZC6uXvGjGu2f3C33/iRd3aws87A0rCIrau1J/6E/bLT7vNXnHwj21//RGrVJi7RD01Ua8QQwv6r55qb0NncC0we0w4g6IK04lHMBLYwKo2HHIRr0vpwZ+httTwC0cNf8V6wyDYQdEkDCxXTt5+Ufd8EvqAPH3h4Snh9xlPcvJuDRt2frjXljoHrIM+VqWLi9GaT0Lf2Gad93Ju89Rt2EqfeXq99xukvmsb4tK+H0oA683W64bNSsVbR8Qv/m71zX5m/s/t1uf+EzvU/q71qHQB05zZ3nzUukK7LNTEJAIPZ/gUVjuXI6T4AEqrI9b/YrriFQ7AMY1HhEflJCt9ImRzND6m05tGkbEkYSxgnjcKj1M4ta18xk51b7Avn3q1/cljb7LlfttqTnMgqyRN1KL+al62BW4nk+wf3Hy8eO/7jyfrSrucu2YBHLfj6Ser1b+hxiuyy/tmx+ymxufsHS/4FWs21qwznCGtJBNOuJfBy/szQWeOhhuRKE7qUq8ILjCRWEUoO0yl/0Q8gi0deQhKYEEA5egv6iTIQKUQS8gSWkgpm0/A5bNHEuIU00jW7Iapr9izn3WPvfL6T9i/v/9f2wOrz0YIcbgDRqS5FgdZGnIX4OqpLH3KmWbnpSR9huuyTiVdk/vqa9+wUFSSZ40yaxXD0mZm/ay97bm3wPzzdOlGTFZt1RJZJ3FZhh/dLWE+SFIo1kV6Qpou1loRXk8xj4cEradXF7TiskfCaCUgNB8WxGDNFzxzJBIEqzAwLqGIyCkbF5JwCANxQq1e4j2lQj3qttmbssONb9g7XnazvXDuOzaANLV2MTDkdITEFzZVKaxeZ0Ie2itC7OXv19wDOvWZI8Mkm1PhogC7gm2cM3vD/tvsaQcesG4+VbLK+2ZvpWHDdUimUrAfpmkxygAhBisGoaRoEilCEZ8kFGc4WRK6vA9FpLsAXHAAuVCFi1jhc97CPTniXDAuHA8SGZjvNEtQ7hHDA94ktnyghQDqRKvS9GMp3K9Yu3HKbn3xu+ztX/iAneq1fehUrwxOAmewpRhd3WG23UAjxMWPaxZAP60es0qNYkJLG9L6K6tb9nM3fdyGaZVIVSwFZNpsY4rJ8GnWabwCe8Ec3ZTaD7EsDJksuIp8YHkHS0FBDymII5yAsCBsKX6eulL1IMVxZRJGAqxxqcmOLA80TaZz9SxZNhLvWXr2LVWTFQ4JXfEEUwmeOE2uZc8rSKtUuaaZeKfrlMnchHCSJLNON7WD0w/Za45+2v7gxOvICzkjYYoO8nhDkS89SMQV3TULYJCm16MoBEcD7m+azW99z47OP4z6KTWSSmZTVqvut3xmxprHfseq1Wd4C1GrcqJFOB751XKKghTVgadapfyK0ziS5wgMw0yOGUdPvyRETx/GdAlVF0IFDisOT4Q7RGgIVELMJViF8YdGIMGrEXSJwkI46Fh/Y802Tp2wQe+U3fC8RTv8XHAmMmUhQRmH0LBevP+LdsfDr7H1ouK9QEOdOoKEqjlaYf6mYzSPS7uShZdOvVJsLble9KhAaLIeAtiTPmLt1gaVpsVQZJa2nSib/mlLW8+2CpUsdXilh55LV8evjo7EHN82tcEXBoALiSlh/FkGxoYCr34YY2JGUSqhcimGW/ATrzgJlacseX1MtStPnLQT/+9z9rVv3W3zR79grXnPAI3AoK7ON07bvtoKOv8C9Qi4xY1yIdqHJz66xtIv97hmAaTVytFQPxHP4qhrtq95El1/wGCg1iLVMkqo+lSvsE+IJbOorIedeHVvxoDY8iWFwJwArLvKUjXdlTgUEf1OCziDCwkOH4VSgiqo0SZAlvDKBQ166NaqWLN1PTA/bY/cvWLdzXsQgIY22EUWFVNJOtZMUfnkCCdwXlmxunq9pA3VcpN1ZrwQBx+/XbMAelbdN6JYowQCWNhzxjIJgC6qKSxJa9wRQraXMgFypxYIWXCi8LmCsXZryTINCfU9UD3NENENQw1wyiVbi5xbsIM33EuUTshYPcUJnGI0lLk/CsL9SongolMB0SSfsqoxZJXMpubmIKdFPUgn0Vs6jE5J70PUEKmLtJIM5S+HH1kBaERXXAMALpHu3B23P698En6XOdWS835hCzNnxVdXTrT3kmZMxoyRRTLnlVP1QiVhbFK19Puft/oDf2iV9W8Byyw+dciSo79ogxt+1QaNecZj4sCnynsLF/LIUC/bg8IogMAgT3ZueVbyxQFsPB85yDrmAiO9YXiskOFhQ6CCEqBe7azyTGJ5Zr1ewzYHTa+vZ4k3rZalY2hYpk+dH0+7lP+aBPDg397bZpdkrw8LFObbKP2+7W0vERCBVBrifQhiyV8kLMY0eYoCGCIdOr3nA9Z44N/Q0jYsqWJAQY1NBsuWbX3dssXPW/aC91hv9gb4Lc2HcdexOp+jEPFfxFShD4mU5MSFCDE2MFx3pyLelR6dhFu6CJZjQcyyrlXqcfgJUuFeoA01MU80It4yIx1YAiAo3SAr8qvagmLn3kYwiW8pa+3Nk3SO4c4dCoql/S16wBltXUUUoBYfmA+KFFU0VrnPfDG8/3arf+13LaujXlbp4t4RmbhlpymmLdm4z2rf/FeWdVe8u4tIRoHgIv5x5pclOkgkqowrn2X2iOWCR5hEx6JEt4Tex+qUsrfnzRRMCLU0VWz1pzGxMNeViONTPWCgMcmv5OwY1kt6r0kAvUr1wLBSCeKnYAmAtaLtnz0LA0szApRItWMesKTphQ/pl5tnTlr1/g9apUHGNHRA7/rkUzstenT37IglnRNWfeKzdJjKk1pZyVQxLvh5SjDjPSICbQ8r4hVlugBLDIEnYnbknz+FRurtoMdMl234+sFLUjbRCcDmYBoDHvSr2BFraW5UuxMFkOTF4ijpMp5rEgDcvi6pVaVmeZ2lcjeTVZtprRAWSiVo/NcYzvCTMMQQN6BLDx6+xxrdR2n5YizUiyGx1aoirtcns5Y0rrN06V5L8z5Q42SOVde94orybceHcIzz+AvTXAaea/sWsECKR2nShVbU0Wq6xnCq4ZMUoUGz02Nt0HaVusSsfLq0NJUKymId0B+TALJ6/bC24pxYKIBH1q6cs+kW2xGRWdKAfDbO5nlqaCmsR4WKU0y4iRZFsN+ZIzGUQqMG4EsyhqysxeIC24aQl07w+uMKpbsHf/l0igJ0hPHHBcllIICV9xALLaCQP0ezGHS6VkvOhd5FrOK9R9Li1hmCfKyPCDTlpGSWabjDfCYBVPvFj2kIyisHR40SqrSwnGucs2adIUdDkDgE001mhWxPjAMOa12PjYICHa1s/eGpquGUT8NShXlj83SYO1BVVfXA9AAWWFROrYExISXiUcB71XZYoimjLu4tDq50rrIcF0C3w+p9FaargSiVu4ZEhp71/swFAhCEBt8gAPWAIs/S4Y9HAMyjh3QmRE4Eyw403zjrGy4Ki6kZM5czDttPcDCMcbVTO2T9La0PWHkqoeSK+wnW2lYwRNnGkg3nn8caQAKQC4zeZp6zK6Y5QLxFwgiJDg9xCzjG4Z7sH4kSYK2Mu51N6sQS3wUgePo3BqUUAZzvzqoAj1PrF36tgrUO6Gr40SMfXFUNleB27PI0O1QWKnVLNrW9rUWIJaCi9UdLRgxQpeVCqH6VGaq/7xm2PHiWDVe24H1ki5DpL8MUkTCMbZzhtNYxGx5+pdtxhsAJcpv5InnELvxkHjkEzVDgk3KMjqWMICbxSAA5ml2tqmFVThoQeLW4ZBG22p+jjBCvh2DQvP3qSQBFsVlJszVBXMntWADH7XgFVfOgCvSC8Qx7LMKmn9CkE3khBmiSQPthFRwm1syq9Ya1jxy1k8f+ji0vHbb+4prlWx03ghWM9TKEFRuq+FHr3fgWG0xfx6JGE+A4s59cncAaxQeOizZdcpKtu1LYMXipRwkiQQ8x6iVocdV6qQSACGQSbD7QEIS6fBEStX5FSg1ljlur9KZ+9Cvh+3/uZ6eHLMKC9KFJjZ5F2MLsGUoNxjRthPjEyvCR+xAUBJOh+cwfPGid57/cHmR9cPC7H7OFc9+xRqtjaQ1NqTpvyb7nmb3kzTY49nKYgHUS9LquJAK1TEGIpuAn6DHh6XcSJRRBXs4pvygXlhwuJvmmVWtYSj1O8VyMvb1+zc6jBYXyBB2cxn/FSQBYuc93HrFoLIoAl3jQTHfmqu1D88w0pW3BuZNiu9nfRgBRBZX9RxNX4j0A245+XvvU6s2mHb7hqRi39tjq059nW2cetRm0nempptUPH7Hsac/BJDEP8+kRkHal9u/MosJqsT7kjFel5Hb5JE0svJpzQZNnOGCPoNhgEu6QD4VC84DXL2Fwb9hGjqYWnfCqGAlATzoPlt985Y47KlKUruh2LIB+u8ZWZKVZVkZrgFrRsYX2ubAIU5932zktjhVwkkxBQGi/PobTRKqNmu07tGB7D+5jiPkpF1alIpsRrQcbvtvsYy5V6HJOWOMSYgQyoktkKJbbCIciRoGYqAhoUrRarzxSmfssCLNi1TdmAibBqWFpp6uOqqm1zTY6YSj3iTUqoAXJLnNVt2MBrA6q+4qME0iqmIhFAHU2rmenJQCREczQAijUUXwRFgiV8ql07w2Qpkr7aQikOGDZL/ckHnnsFW5wRHnkSgGX4RAbcHqcCrzAbUeM5xEerVlSTDkpe9eOQa1DPZtfh/3hzoB1TpxBpREqXmaIPusHYc2Sq6ugImXHAmC78SCb8cobBADf2hj9Ws11F4DiU2lAalWpTkSgRtIkSqbLIwJHYWUYc4ElJTsUkj/EjoG59+Jh5+LwNnyJbzvmkr5YjASgVXAWF2G+oa/xnR8mRttCAKyRHYXLxckMe8GughLOkuT0Jcu4KDLK8KLYKwSLSnGdD4WCoSCpoLO1JWs1UNdIcCLTOgKA0ck8IKVtKGYYjRliiqAv5VQjXZd2zmgfL8p09apt+CBi0hz5pUsoc5bPMrfw6Op3OpgVzntDKmFSt/AmaECz2IG2aQ81CWaILh1GhkMG1KvagYR3xwJgt8sF4NWiIIZsVsGLVm/gUatn6ky0CsYVFVRQFQGcKjiuTQS2jFjl8E+6aXjx2qmy8TdivDAGN8Z7jwiQQbylv4S91LNkYJmmNcAQza5WW9ewH2gQ9d6zC1vtzvkqWPCl4FVOuQp2zTBPfjwCQLRHyh6gimsVfKB1hkWYGEJV/KHVq2Yi7YQRFaOhVn+imvRtcTgQNzEi3PGNGE2UZ/JEvwUcKgpkwneR8yjyh6RLAIzDj+BiJOCFxnEJANOKTKGiNGBBGgz4MkMoQnFivJzuMsR1sQOp6mhvE03CO+oBBafhMA8eUoEqXJLOMf3ta5+CX+UU620hkBzNEIF4MgRaI+HCEvAEX+l3zB4Vwd3vzCZnaHERoz/EnvDz4QPoMl/5LPE/+bkNMaJRZaBHahVcrWwFbGoMABSYIHT+6ZwEgHNaPJ4yAdEkrFWw1o5JPsSSeHW3IwH85qte1yySzHfChFoCKNBe9rcXIUBVkBA0BIkgzNUZ9hI1B5JUVbFJUMGN+8u4sad6SbwUq/wXOJ/9nozD4Z4EfEHOSwdEGJd6l1bBGKwYgiQAzWGBelVMWp/MEHLeM7ze0vwIwc2e5oBB3oNPqw50lduOtKAHKpV2L8mC+EUAvE2wcO6fWYSYUpZoQBmni9NG1IJUMyogZvIr3bi/jLvScztnhHImB9ZcjEuwJTVXwikWOklqMdFJ6AOONOQ9jtLXGIKiIY4OTi04KcfJ6nXOuypLKDfklRlCQtB+EpPwRndw/qqGOBU5GZ0lcdXaHgjivJjzk+U66hYtZW7qLGdlghlaKmiKUY0TkkBxeSuW5TOykIfyB7Ij4ss+rgQV8EWsIwwKSxe70F0tHKEBE52+JumvWFYt9y3EJq3sU/azq2zGYOMSyjHB8QKfBzUEwYn1qY2Fq9qBVOqOekAvqx5gaRhVHIilu9Vtw2bbGNWcEyICcy2VyK3lizCfjEUrF7SN3MWMGyVEj4YruavBRXCgx38hVhjK/Oor4y12uwkAMVIp5dfBLI4x5mtWydi7EIuc0RIA7xX0m2xHslkUyPMSVDKnWLwsHUfBXrpii3do/Lqq25kAkuy6gpI07KliGg9b6MqzU7K6hlbib635LKTDuZAiQIjVw9Wh4FPoQucAVMUr6wGy6YcjTszzSe+CXOMsBkxndhj+fLmkgoVLrUSWVvIJq+Pxp2PGF3GUqADSZnyWboIrLCD9yLvWAGhEWzB/a9j02spM7kWAVSqoH0cBI0Zh7EB/l4Kv7nYkgKJaQQAgFbHUSIuwGY7nTbEIMz+OqCrSQXSUJFuA31oFqxVFJ4JD1jImPgPjlaarvPs86+FQ0Vhbj9HNeUwOF5OOLrAoyR79tNVOf4HT78yBbc4ZHfwZG+x7ib9QPKTFSBBhK0hUlSWWFCIeunLOuZlausrmnKADTDAuDm2zjxliqO1WknCeE79OQ2svWOFqYlfdCfPM3HYkAPSso9pjUdkacrQVuae5yLsA2opk7SeO0OrV6hLtBftgxAPnhAZvSXuM07YN1Fc4qMX8oS0FJfjhWlpuaLG6R8Z5xYP2o7uYn2P8G5560KbvfZc1zt1JywVa+xHMjJVH/qtVj7zWen/tn1q/sZe5in3pSIFwlgOTk6YINIthr48KynklbXGNErQVyWY8KmiPAwfeUf0mgNADOJvmign1n2gNoJw7EgBHTA6OWiWFqQfsnz4LsX0OiYtAmInxzelKOdkQ6Ve9nIP+CJHhDit0eo6Bs/qDL1r1zN1M6ivs49B79tNq973YhpwbKljtySw9GvqEDAQarnIE3zvxJWvfc6s1i+9zAAPzt/ZtnclsrPSg6eQfW72/YfaCd7NVzQSqlS7I1F7KrVWRKOeqL5pdrcocKgFQhsrRXKAdvLXOrJ+GUN28wXlF+AwAk7DOgwon77FNZAdSeTsSQD+xeB6UgjQEsRO2f89pCFTfE7Eooxk9QJVPOec5ck7lKFR6CmxGw9MPW/Pe91hz6dO0uLDy5OSrpQ9ztH3fK2z4zJutd+AmNkc0jut4umOXOGBEZt2/uMvmvvw2a1bp9dpPVm9yhoV2rkXVsN+w7Nx9Vv3uf7LiObdAahgrtGgVZaCMjuGHxjDsbFkdAYT5COZ7meDFszGQhTeCSwoxd7CEumwRQMHmyGQOrJO5X3vxB6u8ULfP+UwWEZWz6pifpqwSC2paKrs+cs0zFiuSEk7JI5qjf8hcMTxxt0196lettfRJWiY9oYp+zTsFVtDq6c/54l1W+epvWPPbf8BJY85osh+LlZEJUq+1opF881M2d88t1qouhZYtZnhBKldsVevFx8sLUpnT039KL/uiT9TBsEwcYNv0wWwXwAY9ADUejc7F6GhJA+35wYw3glAziqAMdRTtBcgSKiNRMZzMDKHcJevkv6J7vHnjNAdd93j9IEjKRcKkt2+G4a5crJCoEb3gdLQlao2RTHHBL4rAy4Bjxbc/ZTN3v5WX4B71YcPTnQKYhnT1+Y28xyukWzDiwX9r9S//c6uzfVnViWr2kZOv/Beb/yotv3aOM2BNyoorVjGLy/nPLfQIgh3wMGllD3/Yqj2Omuh0g4gRXbFcZeJTHxzokwrKkCVLHE5CSHQ6gx6nrcgLHIVJS5IaqldZOcvLPDa5ACYeglZnZ+eLNJsVuV4/eFthK3Jfe/w4Iszx+vCeblJu2RFBtxErwkIGRn39ozZz39vZ8N6k5aJTy0U+CLdrHIpTN0O1GDBQJyc5j605ovVMq28sW/P8A8wV9DZW3E6QowCJ4wFekWV3VQgNaLi1SQ96mIn5owxtb0FZoxKUoc+1+NF3+dGAiv4ae8H6HodcoJ1zNsTXba1Hz460esEUEw5ksQqmUfJVnbxZmXwSnrgHZOnc3mGaMYPhVDcKq+YbfiJaLUSn4Ly16Zy/9oJTMRZAv5NCS8v5cIx95SM2e/9vYWnkWIqOl4rJDqZbvID1cVatU+kMC/pATd5ZtmTxc1bZ/HbYxNfpOy8bhgNbKi1Oj3Mp+EqODWGs6E4f/7hVVv4CrYshDTjx0/OqKASQDNct5e3+cnFJMuk0HGhYGzBEjgQQPMorRnbJr46Q5f2JDHGOV7dJXNHIDsE1L1FskgraQleemT4PoTDMx3st0mhBvheMEATIzVs+Zmu75z/Y7LfeScvnVLSf7Q0VCCwQrBxxMN2zek1JVQD8eukvocUnTN6hyoLfZrKDkUcyC5iVLqcU4WWC3YI3mE8qD33YKjSWFO6JeU4DGXM24/1ENAIIPZcUF254o34dAbiwxgqQHUja1BYdisd60Wd1OqGbuAcwuR6K+yyhUUJfu7bKa5thJ0xFp4yTtHOGTqmgDEfOfA5jcRwx+cLv2cx3fp+z9hTpE3Vgi+h0dotHYoO4J4bxpxlEaWJxwvir7UAxylmO0CWYER/UazyVOCKFZZRYwqqhDLZcz09WvmKVx//MtbY0pkutHPpm/JplNbDR6r08ylY5Pd4HWGcl7GUGEpGRlAInNBxHSYrzg3yVCWQyN7EAeE3hAHSEilG4dsJm6ysswjhMpdpSiYwujXLIKljH9gDmGmxyvO+z77D2Qx+wtEnLld6vKvifVwU/CMS10gnfyAUmaI0xPtFGSlxgIacYFjORX4zxTw+QLziJRwm08g6nuJFu+v3beCHkDA0nMFhjjr6lVqdn84k0zxZU0TDBb/Zkhggvn4tEXRp4y/fCZIogeO729x656nkgR85tYgHA1gOqi6ojhmsRtqe+aLWKxpbAP2kK1A6sswxDqIlrnCq485/Z1A+oaEvzAsWNcWk00JS14Vl6VYgzzGOIR0iwR6V7vPPV6VEbjXTFp/K5JgWyYHYgwV2AlW1ouIX9qrvMUPRHjNv0LpjvW5HsBVdTFoPlMTcniEbAcOUvZfDGjxdYoiTgdiDCTFUUWCyHvjkCuKJnYgEkWQXDSsRFQdqK3DvNIsy3IsVY+CtNgQmsYBHWXzpp2Wd+3RqnP8GczITsICINQN/TDC3b/cRt/0L9fINHQhADohACo7lHISpJdZYrGe5+F4AiVWyAkvgclXoGSTkrY72ClJz6U8vO3APDdeYTjcs1JexIKiOWo6FIBa2xBvCXMsgfzC4qTWsA3voBqfcqSyY2QyjvxALgnTA/D6pMqkGhrcgpFmHQqTYpRkpTsALT9PKKVe/8R1ZfvsvSurSGWAwUMsoCIwTkUT4hGzFU6QqrkOBcXngdvIQHxnN7LxkD9izCAJOJVq8Z4cLvkKNy0fd5O1MNovLgf7QE3V9DkASQVmhEJU3CQc9VFTb5UgoyCw5kEqVqpjfjtQ8gIeV5DlMmd5EzV87wxiO3NwcZb0XGutJQ0CT6tod3AsS8EC0iaW9MDsXdH7DqypfYLGDC8ooIQnCx1YvJ3rpVm9A2S2aFepdMDK3VmcnNIUMWZ5yYJPxePk/njRDw53z2aoWyPTGmRaz01g5jPudSOQ5f/e5/A4QhtMdxlBpH0pkXRJvoTFEopACsI4AwMzjigB30dXpA3AvWULa4nXp130QC2Hj6c2aZYUerYNElda2SsmMUqk9JtF7ZWFjc5E88QisKRCtdFXZBiBdysUc4k4hzFnmvCMKIQPFBfgBD1hIBgsYbZeHDUGC+4kKsN36P9JvjckOb+5Q5VH3Ii4AFpo/qY3ewPviqj601NDsvMRbiL2XoSHqvfCcAJKDVDrjKCR/mCH7egfjR94BidnpPUknbakBy4tUQxXcTU4EoCNHayuN9qhlWwS2EscxihpVywlsyKWsDTgmQUV0nMDzkIy+4vEUKjxcANiEkLH0bqw9tT2XAWsL6aIae4oDHKV4+8HgcT/c7DsXhvBAYBH79BBoOEZCXyXWgF8Wbs9a6799Zuvw4L+jErUjB61LPptBzEgBOq2aVKSc8mq87VE92Jc6D70gAE5kittLqniKLW5EUJj7xcVN79OxhJKFqOyUc5+N9qlbVKq9oWvfuPuYChNAAGE4GggMr1QP0NVZVTiepHaEapMfJQx5hFSflFRP4aQCLfwFGae4QOAzynuJxwutUkacUSIyToF2CShdWXF/HKg9bK8O0/vX/bdkL1ZuVJiw65aHN+IrvBQitzw8BvdOkz+x0aJB8EBYz5ORmCBU9kQA28nQ+Z8fJGU/B8IlX+FO77/svsI31mlWmZCiGkbTw/hZsarMd+arC1jdpxZq1dNaeSTvBXJgwWKbup1doB4NOoW80iXhUDHpKaG2ueTh7CKtgtUIflylGers45wThIatLJo7bzlRnbumL6WIpsKEHgdIZrMywmSPy1fYxay9+FDPHHqL0grngwcFTApAlVEV6DkU7WmjG45ZQvrWTFvUdaUETCQAe8WZ8LBBpp+y5tWYy+8ZDL7K77nu+/eIr7+XAKnq+KGKGhgyRZjlHxWQY1QaJtyi1PiV4xZxrYXRA+/CPD6NIS0AJ+wxJKTSExTkbF6B/GkhCYmMilTHfUVCW9xQRiBqs1iGOqO0jkPCdH9Gg6EAHvvJPxDh4QsPtPvg42xi8ycMHqmMGUIOHVtLFECcBeAVUbixew6SK02YMU+AmC9GJzgOBwd1EAsiyfgtLq5etjqlFbq0NoQcO2u9/4q32/KfeYoeessWbIyxSIFiTHeBcat6hK/OV6FiknjDUQ9wlDPx6rZhVHS8ci4EabOj+JI8EJyZrpSNh8XB9UHq8xl4MaOJAysnYRMfcvZcB42mgo3cJToTr9VFHXBp0iBMDkzNdO3s/p+FeP0tn03qGOH4yr6QUuNFt22o0RTu9oJHTIswFAF686zNJd2IzhOd3LFe5dXtsMQhGXBOxCEBW5PljLXvwGz9v//B9/9J+782/azfeeAqjVBM+AQDD6QtkgJEQp8o4pR6nVlU6EssaCb8DkycWqMrJuSB8vsDPrKcj8gVMVLI6gxMGIp9vFfQJHyQqW5eEp2bKNepl2I9TCY5X27dYWGa/MmtTz2JvAYSp9pTBnjL0chrInli/3lZkCYV0J01FUG7mXYDVDehZk56zlYfRYSd3E/WAbidZraoF4TTrO1MYhmp8Me7gjfP29RNvsje979n29174P+xVL/68HT3ER1pbXWtg9dRhBa2W9eEOMYy3Zxml8FM5Yv2pimq686pFhjtnvaZldd3M59G+6hVnvVchBDghDHISXNAwhUitmxSaKRtovH2Pf3wYlLSkobmUEpsiqJ0zVVBDl+jSBJt3Urv37Mt8opXKScmhNOC1CKNTugBqebHyoQ+9BCPN5G4iAfBdosfzzqAo2mp2IKduoq8is8hCaodabVtferl98LGb7CPfPWN7q4/ZfO0M7w6f4SNOZ20fG/cH+JCHvqYyz6tMc5iwZ2c2eKmDjx7xFmKjhgkYCXMownF75SUwDWcSkg9rKjowW+W7diJOe2sgTXThnDz3i4naymcJpURfPUpQIl7CiUJzL3gE4hgUQRjn54z43MJjZ15on116qVs9NRQEuIBGKqj0DBUBpTtahKmMiQSw+r2TJ1rH5hcrC5X9lKMqcHmJfHSDdsYbS9WZ1GaPcDykf8S63SP2A7r097hYCrhilp/CJM3qOeNV1Gq+zlbkqn9fQp842FNfZlW9yBFHBDS1yPtmy+y0LSOoVfacN3mBb4se1bF6jbwNNjQ5r+PGMo2FUhHpAUFQTLJxrnHtRWME7PKH6HWqgxCU4o7oUnghwkUEqD7m17XNxefabQ+/xc5wHEX7vnEgiJnDENQFgWMvhqdHCRN6JhLA44+/dOkpK0ufH1439fpUr4fFgVbtxAumG/onfenmCutsmpwqVg7FOjdkfMyPDTtUOt6CHBzliJ/O2Zg9xsVxHRsyfeUrtHMExSYCmg4nlItNa9qqTWcrNlPlaizZXs4i7eU86p4WgppZoWfRq6bOW3t63QXV4psVzYY+tASDuMJnL0UQwmJYCkMf1EvlFa3ek0Q5KTDev8YIPUunX2Z/9IPftLvOvxBzAy1dlZIji2qoS0PUhhLInhXJY/h25CYSgDB2Tp77w+rBmddnh3Q+hgiVPu6IU88OaQLACQbCQ5fniURKZShUnDi5CO4CU3NFdy34Fk8xxPZCk9Pu2yrXMnKRGVzfpxuucJ3S/i29im5WG/JOL18Ia/G+2pSExV7FHCr5niZCml5GYPQuvug132b40xDYWufjIl2GQV7EqLJalzwQyOZm0xaXn2tfW3qt/dnmG+x7+eHY8mOlVU9I9rri0ety5zh7JK2JenxP1dmJm1gAp+6/7VPp/Fs/VZ078Cr9E5jQ6WNvoMTQzfGIutJFYkccJj52nliLEB7l8ZqFzI5PdcaN+yUsRUtYnH3hycV7u/lwlgvhIKgVhLRIC9YXz7RxNGRkLk5qLcGbj9jRJaxawYuFfEmg3diwOb702GiRuY65ub5ga62jtsa367Su03kfJ2OsXqXXFSAksUo5toUxu588iG9HbmIBmB0fbHzr1TfzTd7PtG+cO1aTRkGr0TDkc5qKhVInrqSQpzNKMErHuehiwB+6eQ092f0lw5XkMDG9hFcv8jT1LpySSxTlczxCWoqIlaDCNcPzoGulS6QtgUfnybAf+vESTaxijAYolVTi9DJ1i07DLutETkoA38+f6K6tnyjTJn3uQAAMA2de8tDgvntfM9w69pGpZ+x7QZ3jn5lOsUGId0mVKgKhWGSX3XScGJ+uYo2k25e1K+tVVlZ5xv3Cq7ALfCxB+XR5VImEsCJHDUNhubH0Me8oWnFBw4kFRAQuAqIu6OUAq3essDLvs25oDoq7P/2hPTtaBYuk2Ibkncz1Nz50ZuORG/9XsTmzNdhMbxj0G7NqYaNLY7aHIRuKg4bi4qByPGPNVcXyCiWTwJ/SI0jwxDjBiPnuyrjyORZfegOcZhqA9MfFfOm4SzxEeTiCQM82vI7RXJAuHPrFSB3Ekla0iIkgYenV2Oy+86EvvfvbF5Q/QUDofgj34b3tIy/765WF6Vdmrdrzs0blGNfepJpOaw9YllAd3ZEmIh1fWqO4qDXEqNdECkJjU6+JFVeFx6iTV2ENaRp7Q5MfI30cVpL1DKOHA8aoUaayMZTx3iAISECKc+dhCUZxQQCiX1pRj+cyw097qffNA3ntpjvey7d2duhG5eww32XAb59uNJ6+N52r7a/N8lmzauVwkRWH02r9cFarHuT850EEsi9tZPNpNZtK6zXep+BIus5XRQGVgpKwRkIiWcxXxX04KIUkKhQfHgoFd1Gc0h0oPhQWs8u40ivGh/jYE2KC5gJZp5wGMmvs54wWpgnIPl9Yc23rlz/3vqmPC3ynzmnbaaYfAh6yPz7VnL9uPm3xLbOsspC2modr9eohlHb0vcp1WbNykL2GhaSSzGW1SjutVRr6lA0vvrC/zMVEKSFJQ/HepBpwiTnjAvM4JcUausYSw+NqtHeWCKOHe7m5uUNP/cgQ8nuEYYzl9BWCYOipL3ff+8X3N24l6zU5UP0kuuOsr29q19t759OZ5t5Ko32g0kgOp83adSjehxHAAYRzgO9X7+XLLfNJLZnOGo2UnuW9yYUk2w/illA004mBEpoLKvAxVFz+GL746cu0MpJeoH6Bpdxt/3xM0Zrntt7XPNG85c47taNxbY6i/9I6WHt7q9m8fi7dU99Xb08fQBAH+Tr7oUq9drjKxVfz9rN3sS+pV+fTejaTVpJWxle7sgb2IQTkKkjZo6KwXGhRKOoO4r96iRvcUDD4hJBlq/2Hq1udd9/3P2f+8w/Lvb/MApiw7m+szdjbppMD03NFbbg3q07tr800D3Ei+gCn9A7xrZ3DSaOynw9xMCQms0k1ma5UGfaytMrSQToB3z8sOpx2OJv2i6/VO/2Pt5ef+Ng99zx7RztflyP2r4AALlf1i+OPowo8v2XNQ9PtVmu6PtWaKvgfnmlR62FNXe0/euLssv3SxIduL8a+G97lwC4Hdjmwy4FdDuxyYJcDuxzY5cAuB3Y5sMuBnxAO/H/fi9P9QXUOnwAAAABJRU5ErkJggg==";
+
 const PAGE_META = {
-  draw:     { title: 'How To Draw — Bulk Worksheet Generator <span class="version-tag">V3</span>', navClass: "active-draw" },
-  imagegen: { title: 'Image Generator <span class="version-tag">V3</span>',                        navClass: "active-imagegen" }
+  draw: {
+    title: 'How To Draw — Generator <span class="version-tag">V3</span>',
+    navClass: "active-draw",
+    icon: ICON_PEN,
+    iconTitle: "How to Draw"
+  },
+  imagegen: {
+    title: 'Image Generator <span class="version-tag">V3</span>',
+    navClass: "active-imagegen",
+    icon: ICON_IMAGE,
+    iconTitle: "Image Generator"
+  }
 };
+
+/* Point the header icon at the given page. */
+function setHeaderIcon(page) {
+  const meta = PAGE_META[page];
+  const img = document.getElementById("headerIconImg");
+  const btn = document.getElementById("headerIcon");
+  if (!meta || !img || !btn) return;
+  img.src = meta.icon;
+  img.alt = meta.iconTitle;
+  btn.title = "Go to " + meta.iconTitle;
+  btn.dataset.page = page;
+}
 
 function openSideMenu()  { document.getElementById("sideMenu").classList.add("open");    document.getElementById("menuBackdrop").classList.add("visible"); }
 function closeSideMenu() { document.getElementById("sideMenu").classList.remove("open"); document.getElementById("menuBackdrop").classList.remove("visible"); }
@@ -4509,6 +4558,7 @@ function switchPage(page) {
   document.querySelectorAll(".page").forEach(el => el.classList.remove("active"));
   document.getElementById("page-" + page).classList.add("active");
   document.getElementById("headerTitle").innerHTML = PAGE_META[page].title;
+  setHeaderIcon(page);
   document.querySelectorAll(".side-menu .nav-item[data-page]").forEach(btn => {
     btn.classList.remove("active-draw", "active-imagegen");
     if (btn.dataset.page === page) btn.classList.add(PAGE_META[page].navClass);
@@ -4694,6 +4744,79 @@ function validateBulkData(promptText, data) {
   return { ok: true, vars, rowCount: data.rows.length };
 }
 
+/* ===========================================================
+   Bulk progress, shared across tabs
+
+   Which entries have already been generated is keyed by the DATA itself —
+   a hash of the prompt text plus the full CSV contents — not by tab. So
+   opening the same prompt + same CSV in a second tab shows the same green
+   rows, and finishing a row in one tab lights it up in the other.
+   =========================================================== */
+const BULK_STATE_STORAGE_KEY = "imagegen_bulk_generated_v1";
+const BULK_STATE_MAX_DATASETS = 40;   // keep storage bounded, evict oldest
+
+function hashString(s) {
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0;
+  return (h >>> 0).toString(36);
+}
+
+/* Identity of "this prompt with this data file". Includes every cell so an
+   edited CSV is treated as a different dataset. */
+function bulkDatasetKey(promptText, dataFile) {
+  if (!dataFile || !dataFile.rows) return null;
+  const headers = dataFile.headers.join("");
+  const rows = dataFile.rows
+    .map(r => dataFile.headers.map(h => r[h] === undefined ? "" : r[h]).join(""))
+    .join("");
+  return hashString(`${String(promptText || "").trim()}${headers}${rows}`);
+}
+
+function currentBulkKey() {
+  const promptEl = document.getElementById("igPrompt");
+  return bulkDatasetKey(promptEl ? promptEl.value : "", igState.dataFile);
+}
+
+function loadBulkStateMap() {
+  try {
+    const raw = localStorage.getItem(BULK_STATE_STORAGE_KEY);
+    if (!raw) return {};
+    const obj = JSON.parse(raw);
+    return (obj && typeof obj === "object") ? obj : {};
+  } catch { return {}; }
+}
+
+function persistBulkStateMap(map) {
+  try {
+    const keys = Object.keys(map);
+    if (keys.length > BULK_STATE_MAX_DATASETS) {
+      keys.sort((a, b) => (map[a].updated || 0) - (map[b].updated || 0))
+          .slice(0, keys.length - BULK_STATE_MAX_DATASETS)
+          .forEach(k => delete map[k]);
+    }
+    localStorage.setItem(BULK_STATE_STORAGE_KEY, JSON.stringify(map));
+  } catch (e) { console.warn("Failed to persist bulk state:", e); }
+}
+
+function loadBulkGeneratedFor(key) {
+  if (!key) return new Set();
+  const entry = loadBulkStateMap()[key];
+  return new Set(Array.isArray(entry && entry.rows) ? entry.rows : []);
+}
+
+function saveBulkGeneratedFor(key, set) {
+  if (!key) return;
+  const map = loadBulkStateMap();
+  map[key] = { rows: [...set].sort((a, b) => a - b), updated: Date.now() };
+  persistBulkStateMap(map);
+}
+
+/* Re-read this dataset's progress (called on load, on CSV/prompt change,
+   and when another tab writes). */
+function refreshBulkGeneratedFromStorage() {
+  igState.bulkGenerated = loadBulkGeneratedFor(currentBulkKey());
+}
+
 /* Entry number for naming: the '#' column when present, else the row's
    1-based position. Works for any CSV, not just the sample. */
 function bulkEntryNumber(row, headers, rowIndex) {
@@ -4817,6 +4940,9 @@ function igRefreshModeUI() {
     : "Type a prompt first, then upload the CSV that fills its variables";
 
   igRefreshInfoBubble();
+  // The prompt is part of the dataset identity, so editing it selects a
+  // different progress record (and picks up other tabs' work for that one).
+  if (isBulk && igState.dataFile) refreshBulkGeneratedFromStorage();
   igRenderThumbs();
   igRefreshStartBtn();
 }
@@ -4922,12 +5048,20 @@ function igMakeDataThumb(data, onRemove) {
 
   const check = validateBulkData(document.getElementById("igPrompt").value, data);
   if (check.ok) {
-    subEl.textContent = `${data.rows.length} row${data.rows.length === 1 ? "" : "s"} · ${check.vars.length} var${check.vars.length === 1 ? "" : "s"} matched`;
-    inner.title = `${data.name}\nColumns: ${data.headers.filter(Boolean).join(", ")}\nVariables matched: ${check.vars.join(", ")}`;
+    const doneCount = igState.bulkGenerated.size;
+    subEl.textContent =
+      `${data.rows.length} row${data.rows.length === 1 ? "" : "s"} · ` +
+      `${check.vars.length} var${check.vars.length === 1 ? "" : "s"} matched` +
+      (doneCount ? ` · ${doneCount} done` : "");
+    inner.title = "Click to view the data file and its current state";
+    inner.style.cursor = "pointer";
+    inner.onclick = () => openBulkModal(igReadConfig(), check, { mode: "view" });
   } else {
     subEl.classList.add("bad");
     subEl.textContent = "⚠ does not match the prompt";
-    inner.title = check.error;
+    inner.title = "Click to see what is wrong";
+    inner.style.cursor = "pointer";
+    inner.onclick = () => openBulkModal(igReadConfig(), check, { mode: "error" });
   }
 
   meta.append(nameEl, subEl);
@@ -4970,8 +5104,9 @@ async function igHandleDataFile(fileList) {
     return;
   }
   igState.dataFile = { name: f.name, headers, rows };
-  // A different dataset invalidates the "already generated" marks.
-  igState.bulkGenerated = new Set();
+  // Pick up any progress already recorded for this prompt + data combination,
+  // including work done in another tab.
+  refreshBulkGeneratedFromStorage();
   igRefreshModeUI();
 
   // Surface a mismatch immediately rather than at Generate time.
@@ -5308,12 +5443,22 @@ async function igStartGeneration(cfg) {
 
   igState.running = false;
   document.getElementById("igResetBtn").disabled = false;
-  // Remember which CSV rows produced an image, so the picker can show them
-  // as already generated in this session.
+  // Remember which CSV rows produced an image and publish it, so this tab
+  // and any other tab on the same prompt + CSV show them as generated.
+  let bulkTouched = false;
   for (const it of igState.items) {
     if (it.status === "done" && typeof it.bulkRowIndex === "number") {
       igState.bulkGenerated.add(it.bulkRowIndex);
+      bulkTouched = true;
     }
+  }
+  if (bulkTouched) {
+    const key = currentBulkKey();
+    // Merge rather than overwrite: another tab may have finished rows too.
+    const merged = new Set([...loadBulkGeneratedFor(key), ...igState.bulkGenerated]);
+    igState.bulkGenerated = merged;
+    saveBulkGeneratedFor(key, merged);
+    igRenderThumbs();
   }
   igRefreshStartBtn();
   igUpdateStatus(`Done. ${igState.items.filter(i => i.status === "done").length} / ${total} succeeded.`);
@@ -5327,15 +5472,22 @@ async function igStartGeneration(cfg) {
    successfully this session are tinted green but stay selectable, so an
    entry can deliberately be regenerated.
    =========================================================== */
-let bulkModalCtx = null; // { cfg, check }
+let bulkModalCtx = null; // { cfg, check, mode }
 
-function openBulkModal(cfg, check) {
-  bulkModalCtx = { cfg, check };
-  // Default selection: everything not yet generated. If all are done,
-  // start empty rather than silently re-charging for the whole file.
-  igState.bulkSelection = new Set(
-    igState.dataFile.rows.map((_, i) => i).filter(i => !igState.bulkGenerated.has(i))
-  );
+/* mode:
+   "run"   — pick entries and generate (Generate button)
+   "view"  — read-only status of the data file (valid CSV chip clicked)
+   "error" — why the file does not match the prompt (bad CSV chip clicked) */
+function openBulkModal(cfg, check, opts) {
+  const mode = (opts && opts.mode) || "run";
+  bulkModalCtx = { cfg, check, mode };
+  if (mode === "run") {
+    // Default selection: everything not yet generated. If all are done,
+    // start empty rather than silently re-charging for the whole file.
+    igState.bulkSelection = new Set(
+      igState.dataFile.rows.map((_, i) => i).filter(i => !igState.bulkGenerated.has(i))
+    );
+  }
   renderBulkModal();
   document.getElementById("bulkModal").classList.add("visible");
 }
@@ -5347,29 +5499,72 @@ function closeBulkModal() {
 
 function renderBulkModal() {
   if (!bulkModalCtx) return;
-  const { cfg, check } = bulkModalCtx;
+  const { cfg, check, mode } = bulkModalCtx;
   const data = igState.dataFile;
+  const isRun = mode === "run";
+  const table = document.getElementById("bulkTable");
+
+  // Chrome that only makes sense while choosing what to send.
+  document.querySelector(".bulk-tools").style.display = isRun ? "" : "none";
+  document.getElementById("bulkStartBtn").style.display = isRun ? "" : "none";
+  document.getElementById("bulkCount").style.display = isRun ? "" : "none";
+  document.getElementById("bulkCancelBtn").textContent = isRun ? "Cancel" : "Close";
+
+  // --- error view: explain the mismatch, nothing else ---
+  if (mode === "error") {
+    document.querySelector(".bulk-head h3").textContent = "This data file cannot be used yet";
+    document.getElementById("bulkSubtitle").textContent =
+      data ? `${data.name} — ${data.rows.length} row${data.rows.length === 1 ? "" : "s"}` : "";
+    table.innerHTML = "";
+    const wrap = document.createElement("tbody");
+    const tr = document.createElement("tr");
+    const td = document.createElement("td");
+    td.style.cssText = "white-space:normal;padding:20px;max-width:none;";
+    const h = document.createElement("div");
+    h.style.cssText = "font-weight:700;color:#b91c1c;margin-bottom:8px;font-size:13.5px;";
+    h.textContent = "⚠ " + (check && check.error ? "Validation error" : "Unknown error");
+    const p = document.createElement("div");
+    p.style.cssText = "color:#374151;line-height:1.65;font-size:13px;";
+    p.textContent = (check && check.error) || "The data file could not be validated.";
+    const hint = document.createElement("div");
+    hint.style.cssText = "margin-top:14px;color:#6b7280;font-size:12px;line-height:1.6;";
+    hint.textContent =
+      "Variables must be UPPERCASE and start with VAR_ in both the prompt and the CSV header row, " +
+      "e.g. {VAR_MAIN_SUBJECT} in the prompt and a VAR_MAIN_SUBJECT column in the file.";
+    td.append(h, p, hint);
+    tr.appendChild(td);
+    wrap.appendChild(tr);
+    table.appendChild(wrap);
+    return;
+  }
+
+  document.querySelector(".bulk-head h3").textContent =
+    isRun ? "Select entries to generate" : "Data file status";
+
   const vars = check.vars;
   const firstVar = vars[0];
 
+  const doneCount = igState.bulkGenerated.size;
   document.getElementById("bulkSubtitle").textContent =
     `${data.name} — ${data.rows.length} entr${data.rows.length === 1 ? "y" : "ies"}, ` +
-    `${vars.length} variable${vars.length === 1 ? "" : "s"}: ${vars.join(", ")}`;
+    `${vars.length} variable${vars.length === 1 ? "" : "s"}: ${vars.join(", ")}` +
+    (isRun ? "" : ` · ${doneCount} already generated`);
 
   // Extra (non-variable) columns are shown for context but greyed in the head.
   const extraCols = data.headers
     .map(h => String(h).trim())
     .filter(h => h && !vars.includes(h));
 
-  const table = document.getElementById("bulkTable");
   table.innerHTML = "";
 
   const thead = document.createElement("thead");
   const htr = document.createElement("tr");
-  const thCb = document.createElement("th");
-  thCb.className = "cb";
-  thCb.textContent = "";
-  htr.appendChild(thCb);
+  if (isRun) {
+    const thCb = document.createElement("th");
+    thCb.className = "cb";
+    thCb.textContent = "";
+    htr.appendChild(thCb);
+  }
   const thName = document.createElement("th");
   thName.textContent = "Output name";
   htr.appendChild(thName);
@@ -5396,21 +5591,25 @@ function renderBulkModal() {
     const tr = document.createElement("tr");
     const done = igState.bulkGenerated.has(i);
     if (done) tr.classList.add("done");
-    if (igState.bulkSelection.has(i)) tr.classList.add("selected");
+    // Selection highlight only matters while choosing what to send.
+    if (isRun && igState.bulkSelection.has(i)) tr.classList.add("selected");
 
-    const tdCb = document.createElement("td");
-    tdCb.className = "cb";
-    const cb = document.createElement("input");
-    cb.type = "checkbox";
-    cb.checked = igState.bulkSelection.has(i);
-    cb.addEventListener("click", (e) => e.stopPropagation());
-    cb.addEventListener("change", () => {
-      if (cb.checked) igState.bulkSelection.add(i); else igState.bulkSelection.delete(i);
-      tr.classList.toggle("selected", cb.checked);
-      updateBulkCount();
-    });
-    tdCb.appendChild(cb);
-    tr.appendChild(tdCb);
+    let cb = null;
+    if (isRun) {
+      const tdCb = document.createElement("td");
+      tdCb.className = "cb";
+      cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.checked = igState.bulkSelection.has(i);
+      cb.addEventListener("click", (e) => e.stopPropagation());
+      cb.addEventListener("change", () => {
+        if (cb.checked) igState.bulkSelection.add(i); else igState.bulkSelection.delete(i);
+        tr.classList.toggle("selected", cb.checked);
+        updateBulkCount();
+      });
+      tdCb.appendChild(cb);
+      tr.appendChild(tdCb);
+    }
 
     const tdName = document.createElement("td");
     tdName.textContent = bulkCardName(row, data.headers, i, cfg.model, firstVar);
@@ -5441,13 +5640,17 @@ function renderBulkModal() {
     }
     tr.appendChild(tdStat);
 
-    // Clicking anywhere on the row toggles it.
-    tr.addEventListener("click", () => { cb.checked = !cb.checked; cb.dispatchEvent(new Event("change")); });
+    // Clicking anywhere on the row toggles it (selection mode only).
+    if (isRun && cb) {
+      tr.addEventListener("click", () => { cb.checked = !cb.checked; cb.dispatchEvent(new Event("change")); });
+    } else {
+      tr.style.cursor = "default";
+    }
     tbody.appendChild(tr);
   });
   table.appendChild(tbody);
 
-  updateBulkCount();
+  if (isRun) updateBulkCount();
 }
 
 function updateBulkCount() {
@@ -5641,6 +5844,18 @@ document.getElementById("costReset").addEventListener("click", resetCostCounter)
 document.getElementById("balanceAmount").addEventListener("click", promptSetBalance);
 window.addEventListener("storage", (e) => {
   if (e.key === BALANCE_STORAGE_KEY) updateBalanceDisplay();
+  // Another tab finished some bulk rows for this same prompt + CSV.
+  if (e.key === BULK_STATE_STORAGE_KEY) {
+    const before = igState.bulkGenerated.size;
+    refreshBulkGeneratedFromStorage();
+    if (igState.bulkGenerated.size !== before) {
+      igRenderThumbs();
+      // Keep an open picker/status view in step, without disturbing ticks.
+      if (bulkModalCtx && document.getElementById("bulkModal").classList.contains("visible")) {
+        renderBulkModal();
+      }
+    }
+  }
 });
 document.getElementById("subjects").addEventListener("input", refreshStartBtn);
 // Clicking the dim backdrop closes; clicks on the image or arrows must not.
@@ -5700,6 +5915,11 @@ document.getElementById("menuToggle").addEventListener("click", (e) => {
 document.getElementById("menuBackdrop").addEventListener("click", closeSideMenu);
 document.querySelectorAll(".side-menu .nav-item[data-page]").forEach(btn => {
   btn.addEventListener("click", () => switchPage(btn.dataset.page));
+});
+// Header icon navigates to the page it represents.
+document.getElementById("headerIcon").addEventListener("click", (e) => {
+  const page = e.currentTarget.dataset.page;
+  if (page) switchPage(page);
 });
 
 /* ---------- settings dialog ---------- */
@@ -5808,6 +6028,7 @@ populateAspectDropdown(CUSTOM_RATIO_DEFAULT);
 populateQualityDropdown();
 igPopulateQualityDropdown();
 igPopulateAspectDropdown();
+setHeaderIcon(currentPage);
 igRefreshModeUI();
 igRefreshStartBtn();
 igRenderGrid();
