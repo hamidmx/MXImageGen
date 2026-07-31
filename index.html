@@ -14,6 +14,7 @@
     color: #1f2937;
   }
   header {
+    /* Fallback; the per-page gradient below replaces it once a page is active. */
     background: #111827;
     color: #fff;
     /* 50% taller than the original 14px vertical padding */
@@ -32,6 +33,14 @@
     align-items: center;
     gap: 16px;
   }
+  /* Per-page header gradients */
+  header.theme-draw {
+    background-image: linear-gradient(90deg, #00a99a 0%, #0d71ba 100%);
+  }
+  header.theme-imagegen {
+    background-image: linear-gradient(90deg, #bb1b8d 0%, #2e368f 100%);
+  }
+
   /* Clickable app icon to the left of the title */
   .header-icon {
     background: none;
@@ -746,6 +755,9 @@
   }
   .preview-modal.has-nav .preview-counter { display: block; }
   .empty-state {
+    /* The results grid has 3 columns; without this the message would sit in
+       the first column and only look centred inside that third. */
+    grid-column: 1 / -1;
     text-align: center;
     padding: 40px;
     color: #6b7280;
@@ -1007,6 +1019,72 @@
     background-color: #c7ccd4;
     color: #fff;
   }
+
+  /* ---------- Generic confirm dialog ---------- */
+  .confirm-modal {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.55);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1400;
+    padding: 24px;
+  }
+  .confirm-modal.visible { display: flex; }
+  .confirm-box {
+    background: #fff;
+    border-radius: 12px;
+    padding: 22px 24px 18px;
+    width: 100%;
+    max-width: 460px;
+    box-shadow: 0 18px 60px rgba(0,0,0,0.35);
+  }
+  .confirm-box h3 {
+    margin: 0 0 10px;
+    font-size: 17px;
+    color: #111827;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+  }
+  .confirm-box .warn-ico { font-size: 20px; line-height: 1; }
+  .confirm-box p {
+    margin: 0 0 6px;
+    font-size: 13.5px;
+    line-height: 1.65;
+    color: #374151;
+  }
+  .confirm-box ul {
+    margin: 8px 0 0;
+    padding-left: 20px;
+    font-size: 13px;
+    color: #4b5563;
+    line-height: 1.7;
+  }
+  .confirm-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+  }
+  .confirm-actions button {
+    padding: 8px 20px;
+    font-size: 13.5px;
+    font-weight: 600;
+    font-family: inherit;
+    border-radius: 6px;
+    border: 1px solid #d1d5db;
+    background: #fff;
+    color: #374151;
+    cursor: pointer;
+  }
+  .confirm-actions button:hover { background: #f3f4f6; }
+  .confirm-actions button.danger {
+    border: none;
+    background: #dc2626;
+    color: #fff;
+  }
+  .confirm-actions button.danger:hover { background: #b91c1c; }
 
   /* ---------- Bulk entry-picker modal ---------- */
   .bulk-modal {
@@ -1535,11 +1613,22 @@
     <h2>Results</h2>
     <div id="igErrorBanner" class="error-banner"></div>
     <div id="igResultsGrid" class="results-grid">
-      <div class="empty-state">No generations yet. Type a prompt and press START.</div>
+      <div class="empty-state">No generations yet. Type a prompt and press GENERATE.</div>
     </div>
   </div>
 </div><!-- /page-imagegen -->
 </main>
+
+<div id="confirmModal" class="confirm-modal">
+  <div class="confirm-box">
+    <h3><span class="warn-ico">⚠️</span><span id="confirmTitle">Are you sure?</span></h3>
+    <div id="confirmBody"></div>
+    <div class="confirm-actions">
+      <button type="button" id="confirmCancelBtn">Cancel</button>
+      <button type="button" id="confirmOkBtn" class="danger">OK</button>
+    </div>
+  </div>
+</div>
 
 <div id="bulkModal" class="bulk-modal">
   <div class="bulk-box">
@@ -1700,9 +1789,9 @@ const MODEL_MAP = {
 const SUPPORTED_RATIOS = {
   pro: ["1:1", "2:3", "3:2", "3:4", "4:3", "4:5", "5:4", "9:16", "16:9", "21:9"],
   v2:  ["1:1", "2:3", "3:2", "3:4", "4:3", "4:5", "5:4", "9:16", "16:9", "21:9"],
-  // gpt-image-2 supports flexible sizes but only three are priced in the official table:
-  // 1024x1024 (1:1), 1024x1536 (2:3), 1536x1024 (3:2). We restrict the dropdown to those.
-  openai_image_2: ["1:1", "2:3", "3:2"],
+  // gpt-image-2 accepts ANY size inside its constraints (edges multiple of 16,
+  // max edge 3840, aspect <= 3:1), so it gets the same ratio choice as Gemini.
+  openai_image_2: ["1:1", "2:3", "3:2", "3:4", "4:3", "4:5", "5:4", "9:16", "16:9", "21:9"],
   // Ideogram v3 supports a fixed enum of aspect ratios (colon becomes "x" in
   // the API call). We surface them all in the dropdown.
   ideogram_v3: ["1:1", "2:3", "3:2", "3:4", "4:3", "9:16", "16:9", "10:16", "16:10"]
@@ -1740,14 +1829,70 @@ function nearestSupportedRatio(target, supportedList, fallback) {
   return best;
 }
 
-// Map UI aspect ratio → OpenAI gpt-image-2 size string (W x H in pixels).
-const OPENAI_RATIO_TO_SIZE = {
-  "1:1": "1024x1024",
-  "2:3": "1024x1536",
-  "3:2": "1536x1024"
-};
-// Map UI quality (1K/2K/4K) → OpenAI quality tier (low/medium/high).
+/* OpenAI gpt-image-2 output sizing.
+
+   IMPORTANT: `quality` (low/medium/high) controls rendering fidelity and
+   cost ONLY — it never changes the output pixel dimensions. Dimensions come
+   solely from `size`. Sending a fixed size while varying quality is why
+   1K/2K/4K used to return the same 1024x1536 picture every time.
+
+   gpt-image-2 accepts arbitrary sizes within these documented constraints,
+   so the UI's 1K / 2K / 4K tier now drives the actual pixel size as well.
+   https://developers.openai.com/api/docs/guides/image-generation */
+const OPENAI_MAX_EDGE = 3840;      // longest side
+const OPENAI_EDGE_STEP = 16;       // both edges must be multiples of 16
+const OPENAI_MIN_PIXELS = 655360;  // 640 x 1024
+const OPENAI_MAX_PIXELS = 8294400; // 3840 x 2160
+const OPENAI_MAX_ASPECT = 3;       // longest : shortest
+
+// Target longest edge for each UI tier.
+const OPENAI_TIER_LONG_EDGE = { "1K": 1024, "2K": 2048, "4K": 3840 };
+
+// Map UI quality (1K/2K/4K) → OpenAI fidelity tier (low/medium/high).
 const OPENAI_QUALITY_MAP = { "1K": "low", "2K": "medium", "4K": "high" };
+
+/* Turn an aspect ratio + tier into a concrete "WxH" that satisfies every
+   gpt-image-2 constraint: multiples of 16, max edge 3840, aspect <= 3:1 and
+   total pixels within [655360, 8294400]. */
+function openaiSizeFor(ratioStr, tier) {
+  const parts = String(ratioStr || "").split(":").map(Number);
+  let rw = parts[0] > 0 ? parts[0] : 1;
+  let rh = parts[1] > 0 ? parts[1] : 1;
+
+  // Clamp extreme ratios into the supported 3:1 envelope.
+  if (rw / rh > OPENAI_MAX_ASPECT) rh = rw / OPENAI_MAX_ASPECT;
+  if (rh / rw > OPENAI_MAX_ASPECT) rw = rh / OPENAI_MAX_ASPECT;
+
+  const target = OPENAI_TIER_LONG_EDGE[tier] || OPENAI_TIER_LONG_EDGE["1K"];
+  let w, h;
+  if (rw >= rh) { w = target; h = target * rh / rw; }
+  else          { h = target; w = target * rw / rh; }
+
+  // Fit the pixel budget, then the max-edge limit.
+  const fit = (factor) => { w *= factor; h *= factor; };
+  let px = w * h;
+  if (px > OPENAI_MAX_PIXELS) fit(Math.sqrt(OPENAI_MAX_PIXELS / px));
+  px = w * h;
+  if (px < OPENAI_MIN_PIXELS) fit(Math.sqrt(OPENAI_MIN_PIXELS / px));
+  const longest = Math.max(w, h);
+  if (longest > OPENAI_MAX_EDGE) fit(OPENAI_MAX_EDGE / longest);
+
+  const snap = (v) => Math.max(OPENAI_EDGE_STEP,
+    Math.min(OPENAI_MAX_EDGE, Math.round(v / OPENAI_EDGE_STEP) * OPENAI_EDGE_STEP));
+  let W = snap(w), H = snap(h);
+
+  // Rounding can nudge us just outside the pixel window; step back inside.
+  let guard = 0;
+  while (W * H > OPENAI_MAX_PIXELS && guard++ < 200) {
+    if (W >= H) W -= OPENAI_EDGE_STEP; else H -= OPENAI_EDGE_STEP;
+  }
+  guard = 0;
+  while (W * H < OPENAI_MIN_PIXELS && guard++ < 200) {
+    if (W <= H) { if (W + OPENAI_EDGE_STEP <= OPENAI_MAX_EDGE) W += OPENAI_EDGE_STEP; else H += OPENAI_EDGE_STEP; }
+    else        { if (H + OPENAI_EDGE_STEP <= OPENAI_MAX_EDGE) H += OPENAI_EDGE_STEP; else W += OPENAI_EDGE_STEP; }
+  }
+  return `${W}x${H}`;
+}
 
 // Ideogram v3 config.
 // The API accepts multipart/form-data at this endpoint with an `Api-Key` header.
@@ -1854,6 +1999,24 @@ const OPENAI_PRICING = {
   medium: { "1024x1024": 0.053, "1024x1536": 0.041, "1536x1024": 0.041 },
   high:   { "1024x1024": 0.211, "1024x1536": 0.165, "1536x1024": 0.165 }
 };
+
+/* OpenAI publishes exact per-image prices only for the three 1024-class
+   sizes above. Billing is by output tokens, which scale with pixel count, so
+   any other size is ESTIMATED by scaling the same-orientation baseline by the
+   pixel ratio. Marked approximate in the cost tooltip. */
+function openaiPriceFor(qualityTier, sizeStr) {
+  const table = OPENAI_PRICING[qualityTier];
+  if (!table) return null;
+  if (table[sizeStr] !== undefined) return table[sizeStr];
+
+  const m = /^(\d+)x(\d+)$/.exec(String(sizeStr || ""));
+  if (!m) return table["1024x1024"];
+  const w = +m[1], h = +m[2];
+  const baseKey = w === h ? "1024x1024" : (w > h ? "1536x1024" : "1024x1536");
+  const bm = /^(\d+)x(\d+)$/.exec(baseKey);
+  const basePx = (+bm[1]) * (+bm[2]);
+  return table[baseKey] * ((w * h) / basePx);
+}
 
 const DEFAULT_CONFIG_NAME = "Default Config";
 const DEFAULT_CONFIG_VALUES = {
@@ -2608,8 +2771,9 @@ function isRetriableApiError(status, bodyText) {
 
 async function callOpenAIImage(modelKey, tpl, vars, subject, selectedRatio, quality, onRateLimited) {
   const modelId = MODEL_MAP[modelKey];
-  const apiRatio = nearestSupportedRatio(selectedRatio, Object.keys(OPENAI_RATIO_TO_SIZE), "3:2");
-  const size = OPENAI_RATIO_TO_SIZE[apiRatio];
+  // gpt-image-2 takes arbitrary sizes, so the selected ratio is honoured
+  // exactly and the 1K/2K/4K tier sets the real pixel dimensions.
+  const size = openaiSizeFor(selectedRatio, quality);
   const oaQuality = OPENAI_QUALITY_MAP[quality] || "medium";
   const fullPrompt = buildOpenAIPrompt(tpl, vars, subject);
   console.log("[OpenAI request]", { model: modelId, size: size, quality: oaQuality, promptLength: fullPrompt.length });
@@ -3182,8 +3346,9 @@ async function igCallGemini(modelKey, prompt, selectedRatio, quality, images, on
 /* ---------- OpenAI (new via /generations, edit via /edits) ---------- */
 async function igCallOpenAI(modelKey, prompt, selectedRatio, quality, images, onRateLimited) {
   const modelId = MODEL_MAP[modelKey];
-  const apiRatio = nearestSupportedRatio(selectedRatio, Object.keys(OPENAI_RATIO_TO_SIZE), "3:2");
-  const size = OPENAI_RATIO_TO_SIZE[apiRatio];
+  // gpt-image-2 takes arbitrary sizes, so the selected ratio is honoured
+  // exactly and the 1K/2K/4K tier sets the real pixel dimensions.
+  const size = openaiSizeFor(selectedRatio, quality);
   const oaQuality = OPENAI_QUALITY_MAP[quality] || "medium";
   const openaiKey = requireApiKey("openai");
   const isEdit = images.length > 0;
@@ -3498,10 +3663,8 @@ function recordImageCost(modelKey, quality, openaiSize) {
   let price;
   if (modelKey === "openai_image_2") {
     const q = OPENAI_QUALITY_MAP[quality] || "medium";
-    const table = OPENAI_PRICING[q];
-    if (!table) return null;
-    // Fall back to the 1024x1024 row if size is missing for any reason.
-    price = table[openaiSize] !== undefined ? table[openaiSize] : table["1024x1024"];
+    price = openaiPriceFor(q, openaiSize);
+    if (price === null) return null;
   } else if (modelKey === "ideogram_v3") {
     const q = ["TURBO", "DEFAULT", "QUALITY"].includes(quality) ? quality : "DEFAULT";
     price = IDEOGRAM_PRICING[q];
@@ -3521,7 +3684,7 @@ function recordImageCost(modelKey, quality, openaiSize) {
 
 function updateCostCounter() {
   const amount = `$${state.totalCost.toFixed(4)}`;
-  const title = `Estimated cost since last reset across ${state.imageCount} image(s). Approximate, based on published per-image rates: Google — Pro 1K/2K $0.134, Pro 4K $0.24, Flash 1K $0.067, Flash 2K $0.101, Flash 4K $0.151. OpenAI gpt-image-2 — low ~$0.005, medium ~$0.041, high ~$0.165 (3:2 / 2:3); square (1:1) is slightly higher. Ideogram V3 — Turbo $0.03, Default $0.06, Quality $0.09.`;
+  const title = `Estimated cost since last reset across ${state.imageCount} image(s). Approximate, based on published per-image rates: Google — Pro 1K/2K $0.134, Pro 4K $0.24, Flash 1K $0.067, Flash 2K $0.101, Flash 4K $0.151. OpenAI gpt-image-2 — published rates cover the 1024-class sizes (low ~$0.005, medium ~$0.041, high ~$0.165 for 3:2 / 2:3; square slightly higher); 2K and 4K are estimated by scaling those with pixel count, so treat them as indicative. Ideogram V3 — Turbo $0.03, Default $0.06, Quality $0.09.`;
   // Both pages show the same shared counter.
   for (const id of ["costAmount", "igCostAmount"]) {
     const el = document.getElementById(id);
@@ -3956,10 +4119,10 @@ function populateAspectDropdown(preserveValue) {
   const prev = preserveValue !== undefined ? preserveValue : sel.value;
   sel.innerHTML = "";
 
-  // OpenAI gpt-image-2 and Ideogram v3 both use a fixed enum of aspect
-  // ratios and do NOT support the custom 333:215 ratio, so for these
-  // backends we default to 3:2 instead.
-  const isFixedRatio = modelKey === "openai_image_2" || modelKey === "ideogram_v3";
+  // Only Ideogram v3 is limited to a fixed ratio enum. Gemini and
+  // gpt-image-2 both accept the custom 333:215 worksheet ratio — gpt-image-2
+  // because it takes arbitrary sizes within its constraints.
+  const isFixedRatio = modelKey === "ideogram_v3";
   const fallbackDefault = isFixedRatio ? "3:2" : CUSTOM_RATIO_DEFAULT;
 
   if (!isFixedRatio) {
@@ -4524,7 +4687,7 @@ const PAGE_META = {
   }
 };
 
-/* Point the header icon at the given page. */
+/* Point the header icon at the given page and apply that page's gradient. */
 function setHeaderIcon(page) {
   const meta = PAGE_META[page];
   const img = document.getElementById("headerIconImg");
@@ -4534,6 +4697,38 @@ function setHeaderIcon(page) {
   img.alt = meta.iconTitle;
   btn.title = "Go to " + meta.iconTitle;
   btn.dataset.page = page;
+
+  const hdr = document.querySelector("header");
+  if (hdr) {
+    hdr.classList.remove("theme-draw", "theme-imagegen");
+    hdr.classList.add("theme-" + page);
+  }
+}
+
+/* ===========================================================
+   Reusable confirm dialog
+
+   Returns a promise resolving true (confirmed) / false (cancelled), so
+   callers can `await` it in place of window.confirm and still control the
+   button wording.
+   =========================================================== */
+let confirmResolver = null;
+
+function showConfirm({ title, bodyHtml, okLabel = "OK", cancelLabel = "Cancel" }) {
+  const modal = document.getElementById("confirmModal");
+  document.getElementById("confirmTitle").textContent = title;
+  document.getElementById("confirmBody").innerHTML = bodyHtml;
+  document.getElementById("confirmOkBtn").textContent = okLabel;
+  document.getElementById("confirmCancelBtn").textContent = cancelLabel;
+  modal.classList.add("visible");
+  return new Promise(resolve => { confirmResolver = resolve; });
+}
+
+function settleConfirm(result) {
+  document.getElementById("confirmModal").classList.remove("visible");
+  const r = confirmResolver;
+  confirmResolver = null;
+  if (r) r(result);
 }
 
 function openSideMenu()  { document.getElementById("sideMenu").classList.add("open");    document.getElementById("menuBackdrop").classList.add("visible"); }
@@ -4585,6 +4780,25 @@ const IG_MODEL_SLUG = {
 
 function igModelSlug(modelKey) {
   return IG_MODEL_SLUG[modelKey] || String(modelKey || "Model");
+}
+
+/* Quality as it appears in the dropdown, for use in file names.
+   Gemini/OpenAI values are already display-ready (1K/2K/4K); Ideogram stores
+   TURBO/DEFAULT/QUALITY but shows Turbo/Default/Quality. */
+function igQualityLabel(quality, modelKey) {
+  if (modelKey === "ideogram_v3") {
+    const opt = IDEOGRAM_QUALITY_OPTIONS.find(o => o.value === quality);
+    if (opt) return opt.label;
+  }
+  return String(quality || "");
+}
+
+/* Edit-mode result name: <source file stem>_<Model>_<Quality>
+   e.g. page_15.png with GPT at 2K  ->  page_15_GPT_2K */
+function igEditCardName(sourceName, cfg) {
+  const stem = String(sourceName || "").replace(/\.[^.]+$/, "");
+  const q = igQualityLabel(cfg.quality, cfg.model);
+  return `${stem}_${igModelSlug(cfg.model)}${q ? "_" + q : ""}`;
 }
 
 /* ===========================================================
@@ -5150,7 +5364,7 @@ async function igHandleRefFile(fileList) {
 function igRenderGrid() {
   const grid = document.getElementById("igResultsGrid");
   if (igState.items.length === 0) {
-    grid.innerHTML = '<div class="empty-state">No generations yet. Type a prompt and press START.</div>';
+    grid.innerHTML = '<div class="empty-state">No generations yet. Type a prompt and press GENERATE.</div>';
     return;
   }
   grid.innerHTML = "";
@@ -5372,7 +5586,7 @@ async function igRunBatch() {
   if (editMode) {
     // One result card per source image in Edit mode.
     igState.items = igState.editImages.map(img => ({
-      name: img.name.replace(/\.[^.]+$/, ""),
+      name: igEditCardName(img.name, cfg),
       source: img,
       status: "pending", loading: false,
       variants: [], activeVariant: 0, total: cfg.variations
@@ -5742,10 +5956,19 @@ async function igRegenerate(idx) {
   const cfg = igReadConfig();
   const item = igState.items[idx];
   if (!item || igState.running) return;
-  // A fresh generation is named after the model that produced it, so if the
-  // model was switched before regenerating, the name follows. Edit-mode cards
-  // keep their source file name.
-  if (!item.source) {
+  // Names record the model (and, in Edit mode, the quality) that produced the
+  // image, so if either was changed before regenerating, the name follows.
+  if (item.source) {
+    item.name = igEditCardName(item.source.name, cfg);
+  } else if (typeof item.bulkRowIndex === "number") {
+    // Bulk cards keep their <#>_gen_<Model>_<subject> shape.
+    const data = igState.dataFile;
+    const row = data && data.rows[item.bulkRowIndex];
+    const firstVar = item.varValues && Object.keys(item.varValues)[0];
+    if (row && firstVar) {
+      item.name = bulkCardName(row, data.headers, item.bulkRowIndex, cfg.model, firstVar);
+    }
+  } else {
     const n = item.name.match(/_(\d+)$/);
     item.name = `gen_${igModelSlug(cfg.model)}_${n ? n[1] : 1}`;
   }
@@ -5806,12 +6029,76 @@ async function igDownloadAll() {
   igRenderGrid();
 }
 
-function igResetAll() {
+/* Reset.
+
+   Normally this just clears the results. In Bulk mode with a validated CSV
+   loaded there is real work to lose — the prompt, the data file and its
+   per-entry progress view — so confirm first, then clear everything back to
+   defaults. */
+async function igResetAll() {
+  const isBulk = document.getElementById("igMode").value === "bulk";
+  const hasValidData = !!igState.dataFile &&
+    validateBulkData(document.getElementById("igPrompt").value, igState.dataFile).ok;
+
+  if (isBulk && hasValidData) {
+    const rows = igState.dataFile.rows.length;
+    const done = igState.bulkGenerated.size;
+    const ok = await showConfirm({
+      title: "Reset the Image Generator?",
+      okLabel: "Ok to reset",
+      bodyHtml:
+        "<p>This clears your current bulk setup. You will lose:</p><ul>" +
+        "<li>the typed <strong>prompt</strong></li>" +
+        `<li>the uploaded data file <strong>${escapeHtml(igState.dataFile.name)}</strong> ` +
+        `(${rows} entr${rows === 1 ? "y" : "ies"}${done ? `, ${done} already generated` : ""})</li>` +
+        "<li>the selected model, quality, aspect ratio, variations and generation mode</li>" +
+        "<li>any results shown below</li>" +
+        "</ul><p style=\"margin-top:10px;\">Generated images you already downloaded are not affected.</p>"
+    });
+    if (!ok) return;
+    igResetEverything();
+    return;
+  }
+
   igState.items = [];
   igRenderGrid();
   igUpdateErrorBanner();
   igUpdateDownloadAllBtn();
   igUpdateStatus("");
+}
+
+// Escape user-supplied text before putting it in the dialog's innerHTML.
+function escapeHtml(s) {
+  return String(s == null ? "" : s).replace(/[&<>"']/g, c => (
+    { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]
+  ));
+}
+
+/* Full reset: prompt, attachments, data file and every dropdown back to
+   its default. Bulk progress stored for this dataset is left alone — it
+   belongs to the data, not to the form. */
+function igResetEverything() {
+  igState.items = [];
+  igState.editImages = [];
+  igState.refImage = null;
+  igState.dataFile = null;
+  igState.bulkGenerated = new Set();
+  igState.bulkSelection = new Set();
+
+  document.getElementById("igPrompt").value = "";
+  const d = IG_DEFAULT_CONFIG_VALUES;
+  document.getElementById("igModel").value = d.model;
+  document.getElementById("igMode").value = d.mode;
+  document.getElementById("igVariations").value = d.variations;
+  igPopulateQualityDropdown(d.quality);
+  igPopulateAspectDropdown(d.aspect);
+
+  igRefreshModeUI();
+  igRenderGrid();
+  igUpdateErrorBanner();
+  igUpdateDownloadAllBtn();
+  igUpdateStatus("");
+  refreshSaveConfigStatus();
 }
 
 /* Quality options for the Image Generator's own model dropdown. */
@@ -5940,6 +6227,10 @@ document.querySelectorAll(".key-edit-btn").forEach(btn => {
   });
 });
 document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && document.getElementById("confirmModal").classList.contains("visible")) {
+    settleConfirm(false);
+    return;
+  }
   if (e.key === "Escape" && document.getElementById("bulkModal").classList.contains("visible")) {
     closeBulkModal();
     return;
@@ -6002,6 +6293,13 @@ document.getElementById("igRefFileInput").addEventListener("change", async (e) =
 });
 document.getElementById("igAddDataBtn").addEventListener("click", () => {
   document.getElementById("igDataFileInput").click();
+});
+
+/* ---------- confirm dialog ---------- */
+document.getElementById("confirmOkBtn").addEventListener("click", () => settleConfirm(true));
+document.getElementById("confirmCancelBtn").addEventListener("click", () => settleConfirm(false));
+document.getElementById("confirmModal").addEventListener("click", (e) => {
+  if (e.target.id === "confirmModal") settleConfirm(false);
 });
 
 /* ---------- bulk entry picker ---------- */
