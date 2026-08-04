@@ -1520,7 +1520,7 @@
             <span class="ig-info-mode" data-mode="bulk">
               <strong>Generation Mode: New Bulk Images — one image per CSV row</strong>
               <ul>
-                <li>Variables are <strong>always UPPERCASE and always start with <code>VAR_</code></strong> — e.g. <code>{VAR_MAIN_SUBJECT}</code>, <code>{VAR_TITLE}</code>. Both <code>{…}</code> and <code>{{…}}</code> braces work. Anything else in braces is left untouched, so ordinary text is safe.</li>
+                <li>Variables are written <strong>bare — no braces</strong> — and are <strong>always UPPERCASE, always starting with <code>VAR_</code></strong>, e.g. <code>VAR_MAIN_SUBJECT</code>, <code>VAR_TITLE</code>. Declare them once (<code>VAR_TITLE: "Example"</code>) and use the same bare name in the body. Older braced forms still work.</li>
                 <li>Your CSV's header row uses those same <code>VAR_</code> names. Extra columns such as <code>#</code> are kept for reference but never substituted.</li>
                 <li>Click the green <strong>Upload data file</strong> button (enabled once a prompt is typed) and pick one <strong>.csv</strong>. Every row after the header is one image.</li>
                 <li>Nothing is sent until the file is checked: each <code>VAR_</code> placeholder needs a matching column and at least one non-empty row. Problems are reported precisely and generation is blocked.</li>
@@ -3869,6 +3869,9 @@ async function generateOne(idx, cfg) {
     item.base64 = res.base64;
     item.mime = res.mime;
     item.error = null;
+    // Remember what produced it, so the file name stays truthful later.
+    item.quality = cfg.quality;
+    item.modelKey = cfg.model;
     item.cost = recordImageCost(cfg.model, cfg.quality, res.openaiSize);
   } catch (e) {
     item.status = "error";
@@ -3924,6 +3927,8 @@ async function regenerate(idx) {
     item.mime = res.mime;
     item.error = null;
     item.regenerated = true;
+    item.quality = cfg.quality;
+    item.modelKey = cfg.model;
     item.cost = recordImageCost(cfg.model, cfg.quality, res.openaiSize);
   } catch (e) {
     item.status = "error";
@@ -3946,10 +3951,22 @@ function extFromMime(m) {
   return "png";
 }
 
+/* Worksheet file name: <subject>_<Quality>, e.g. Cute Lion_2K.
+   The quality recorded at generation time wins, so changing the dropdown
+   afterwards does not relabel images that are already on screen. */
+function drawFileBaseName(item) {
+  const q = igQualityLabel(
+    item.quality !== undefined ? item.quality : document.getElementById("quality").value,
+    item.modelKey !== undefined ? item.modelKey : document.getElementById("model").value
+  );
+  const base = sanitizeFilename(item.subject);
+  return q ? `${base}_${q}` : base;
+}
+
 function downloadSingle(item) {
   const a = document.createElement("a");
   a.href = item.dataUrl;
-  a.download = `${sanitizeFilename(item.subject)}.${extFromMime(item.mime)}`;
+  a.download = `${drawFileBaseName(item)}.${extFromMime(item.mime)}`;
   document.body.appendChild(a);
   a.click();
   a.remove();
@@ -3962,7 +3979,7 @@ async function downloadAll() {
   if (done.length === 0) return;
   const zip = new JSZip();
   for (const it of done) {
-    zip.file(`${sanitizeFilename(it.subject)}.${extFromMime(it.mime)}`, it.base64, { base64: true });
+    zip.file(`${drawFileBaseName(it)}.${extFromMime(it.mime)}`, it.base64, { base64: true });
   }
   const blob = await zip.generateAsync({ type: "blob" });
   const url = URL.createObjectURL(blob);
@@ -4200,13 +4217,21 @@ const IG_DEFAULT_CONFIG_VALUES = {
   quality: "2K",
   aspect: IG_CUSTOM_RATIO,
   variations: "1",
-  mode: "new"
+  mode: "new",
+  refImage: null
 };
 
 const PAGE_CONFIG_KEYS = {
   draw:     ["subjects","aspect","steps","age","pathWidth","style","lineStyle","model","prompt","quality"],
-  imagegen: ["prompt","model","quality","aspect","variations","mode"]
+  imagegen: ["prompt","model","quality","aspect","variations","mode","refImage"]
 };
+
+/* Compare attached images cheaply. The stored value is a full data URL, and
+   config equality is recomputed on every keystroke, so never diff the bytes. */
+function refImageSignature(r) {
+  if (!r) return "";
+  return `${r.name}|${r.mime}|${(r.base64 || "").length}`;
+}
 
 function configStorageKeyFor(page) {
   return page === "imagegen" ? IG_CONFIGS_STORAGE_KEY : CONFIGS_STORAGE_KEY;
@@ -4225,9 +4250,32 @@ function loadConfigs() {
   } catch { return []; }
 }
 
+/* Configs can now carry a reference image, which is large enough to exhaust
+   the localStorage quota. Rather than failing silently, drop the images and
+   retry so the rest of the config still survives — and say so. */
 function persistConfigs(arr) {
-  try { localStorage.setItem(configStorageKeyFor(currentPage), JSON.stringify(arr)); }
-  catch (e) { console.warn("Failed to persist configs:", e); }
+  const key = configStorageKeyFor(currentPage);
+  try {
+    localStorage.setItem(key, JSON.stringify(arr));
+    return true;
+  } catch (e) {
+    console.warn("Failed to persist configs:", e);
+    try {
+      const stripped = arr.map(c => (c.values && c.values.refImage)
+        ? { ...c, values: { ...c.values, refImage: null } }
+        : c);
+      localStorage.setItem(key, JSON.stringify(stripped));
+      alert(
+        "Browser storage is full, so the configs were saved WITHOUT their reference images.\n\n" +
+        "Delete some saved configs and save again to keep the image."
+      );
+      return true;
+    } catch (e2) {
+      console.warn("Failed to persist configs even without images:", e2);
+      alert("Could not save the config — this browser's storage is full.");
+      return false;
+    }
+  }
 }
 
 function snapshotConfig() {
@@ -4238,7 +4286,9 @@ function snapshotConfig() {
       quality:    document.getElementById("igQuality").value,
       aspect:     document.getElementById("igAspect").value,
       variations: document.getElementById("igVariations").value,
-      mode:       document.getElementById("igMode").value
+      mode:       document.getElementById("igMode").value,
+      // Saved with the config so restoring it brings the style reference back.
+      refImage:   igState.refImage
     };
   }
   return {
@@ -4265,6 +4315,8 @@ function applyConfigValues(v, name) {
     if (v.quality !== undefined) document.getElementById("igQuality").value = v.quality;
     if (v.variations !== undefined) document.getElementById("igVariations").value = v.variations;
     if (v.mode !== undefined) document.getElementById("igMode").value = v.mode;
+    // Restore (or clear) the style reference that was saved with the config.
+    if (v.refImage !== undefined) igState.refImage = v.refImage || null;
     if (name) {
       selectedConfigName = name;
       justSavedValues = snapshotConfig();
@@ -4461,7 +4513,11 @@ function deleteConfig(idx) {
 function valuesEqual(a, b) {
   if (!a || !b) return false;
   const keys = PAGE_CONFIG_KEYS[currentPage] || PAGE_CONFIG_KEYS.draw;
-  return keys.every(k => String(a[k] ?? "") === String(b[k] ?? ""));
+  return keys.every(k => {
+    // Attached images compare by a short signature, never by their bytes.
+    if (k === "refImage") return refImageSignature(a[k]) === refImageSignature(b[k]);
+    return String(a[k] ?? "") === String(b[k] ?? "");
+  });
 }
 
 function findConfigByValues(values) {
@@ -4801,6 +4857,13 @@ function igEditCardName(sourceName, cfg) {
   return `${stem}_${igModelSlug(cfg.model)}${q ? "_" + q : ""}`;
 }
 
+/* New-mode result name: gen_<Model>_<n>_<Quality>
+   e.g. gen_GPT_1_4K */
+function igNewCardName(cfg, n) {
+  const q = igQualityLabel(cfg.quality, cfg.model);
+  return `gen_${igModelSlug(cfg.model)}_${n}${q ? "_" + q : ""}`;
+}
+
 /* ===========================================================
    BULK MODE — CSV data file
 
@@ -4859,11 +4922,21 @@ function csvToRecords(text) {
    being mistaken for a variable, and it works for any prompt the user
    writes rather than any particular template. */
 const IG_VAR_PREFIX = "VAR_";
-const IG_VAR_RE = /\{\{?\s*(VAR_[A-Z0-9_]+)\s*\}?\}/g;
 
-// Braced tokens that look like an attempt at a variable but break the rule
-// (lowercase, or missing the VAR_ prefix). Used to give a precise hint.
-const IG_NEARMISS_RE = /\{\{?\s*([A-Za-z_][A-Za-z0-9_]*)\s*\}?\}/g;
+/* A variable is written BARE in the prompt — no braces:
+
+     VAR_MAIN_QUESTION: "What's My Name?"      <- declaration
+     ...place the title VAR_MAIN_QUESTION      <- usage
+
+   Always uppercase and always VAR_ prefixed, which keeps detection
+   unambiguous without needing delimiters. Braced forms ({VAR_X}, {{VAR_X}})
+   are still accepted so older prompts keep working. */
+const IG_VAR_RE = /\{\{?\s*(VAR_[A-Z0-9_]+)\s*\}?\}|\b(VAR_[A-Z0-9_]+)\b/g;
+
+/* Tokens that look like an attempted variable but break the rule: anything
+   braced that is not a valid VAR_, or a lowercase var_ token. Bare uppercase
+   words are NOT flagged — ordinary prose would produce endless false hits. */
+const IG_NEARMISS_RE = /\{\{?\s*([A-Za-z_][A-Za-z0-9_]*)\s*\}?\}|\b(var_[A-Za-z0-9_]+)\b/g;
 
 function extractPromptVariables(text) {
   const found = [];
@@ -4871,7 +4944,8 @@ function extractPromptVariables(text) {
   let m;
   IG_VAR_RE.lastIndex = 0;
   while ((m = IG_VAR_RE.exec(String(text || ""))) !== null) {
-    if (!seen.has(m[1])) { seen.add(m[1]); found.push(m[1]); }
+    const name = m[1] || m[2];
+    if (name && !seen.has(name)) { seen.add(name); found.push(name); }
   }
   return found;
 }
@@ -4883,7 +4957,8 @@ function findNearMissPlaceholders(text) {
   let m;
   IG_NEARMISS_RE.lastIndex = 0;
   while ((m = IG_NEARMISS_RE.exec(String(text || ""))) !== null) {
-    const tok = m[1];
+    const tok = m[1] || m[2];
+    if (!tok) continue;
     if (tok.startsWith(IG_VAR_PREFIX) && tok === tok.toUpperCase()) continue; // valid
     if (!seen.has(tok)) { seen.add(tok); out.push(tok); }
   }
@@ -4904,17 +4979,35 @@ function csvVariableHeaders(headers) {
    The sample prompt declares its variables that way before using them, and
    leaving a stale example value there would contradict the substituted text
    on every row but the first. */
+/* Substitute this row's values into the prompt.
+
+   Handled per line, because with bare names a declaration line contains the
+   variable name itself:
+
+     VAR_MAIN_SUBJECT: "Baby Sea Turtle"
+
+   A blind replace would turn that into `Baby Lion Cub: "Baby Sea Turtle"`.
+   So a declaration line keeps its name and only its quoted value is refreshed
+   to the current row; every other line has its VAR_ tokens replaced. */
+const IG_DECL_LINE_RE = /^([ \t]*)(VAR_[A-Z0-9_]+)([ \t]*:[ \t]*)(".*"|[^\n]*)$/;
+
 function applyRowToPrompt(text, row, headers) {
-  let out = String(text || "").replace(IG_VAR_RE, (whole, name) =>
-    Object.prototype.hasOwnProperty.call(row, name) ? row[name] : whole
-  );
-  // Only VAR_ columns can appear as declaration lines.
-  for (const h of csvVariableHeaders(headers)) {
-    if (!Object.prototype.hasOwnProperty.call(row, h)) continue;
-    const decl = new RegExp(`^([ \\t]*${h}[ \\t]*:[ \\t]*)"[^"\\n]*"[ \\t]*$`, "gm");
-    out = out.replace(decl, (_m, prefix) => `${prefix}"${row[h]}"`);
-  }
-  return out;
+  const has = (k) => Object.prototype.hasOwnProperty.call(row, k);
+
+  return String(text || "").split("\n").map(line => {
+    const decl = IG_DECL_LINE_RE.exec(line);
+    if (decl && has(decl[2])) {
+      const [, indent, name, sep, rawValue] = decl;
+      // Preserve whether the original value was quoted.
+      const quoted = /^".*"$/.test(rawValue.trim());
+      const v = row[name];
+      return `${indent}${name}${sep}${quoted ? `"${v}"` : v}`;
+    }
+    return line.replace(IG_VAR_RE, (whole, braced, bare) => {
+      const name = braced || bare;
+      return has(name) ? row[name] : whole;
+    });
+  }).join("\n");
 }
 
 /* Confirm the CSV can actually drive this prompt before anything is sent. */
@@ -4924,11 +5017,11 @@ function validateBulkData(promptText, data) {
 
   if (vars.length === 0) {
     const near = findNearMissPlaceholders(promptText);
-    let hint = `The prompt has no variables. Variables must be UPPERCASE and start with ${IG_VAR_PREFIX} — for example {${IG_VAR_PREFIX}MAIN_SUBJECT}.`;
+    let hint = `The prompt has no variables. Write them BARE (no braces), UPPERCASE, ` +
+               `starting with ${IG_VAR_PREFIX} — for example ${IG_VAR_PREFIX}MAIN_SUBJECT.`;
     if (near.length) {
-      hint += ` Found ${near.slice(0, 4).map(t => "{" + t + "}").join(", ")}` +
-              `${near.length > 4 ? ", …" : ""} — rename to ` +
-              `{${IG_VAR_PREFIX}${String(near[0]).toUpperCase().replace(/^VAR_/, "")}} style.`;
+      hint += ` Found ${near.slice(0, 4).join(", ")}${near.length > 4 ? ", …" : ""} — ` +
+              `rename to ${IG_VAR_PREFIX}${String(near[0]).toUpperCase().replace(/^VAR_/, "")} style.`;
     }
     return { ok: false, error: hint };
   }
@@ -5045,11 +5138,13 @@ function bulkEntryNumber(row, headers, rowIndex) {
 /* Result/file name for a bulk entry:
    <entry>_gen_<Model>_<first 10 alphanumerics of the first variable's value>
    e.g.  14_gen_GPT_BabySeaTur */
-function bulkCardName(row, headers, rowIndex, modelKey, firstVar) {
+function bulkCardName(row, headers, rowIndex, modelKey, firstVar, quality) {
   const entry = bulkEntryNumber(row, headers, rowIndex);
   const slug = igModelSlug(modelKey);
   const short = String(row[firstVar] || "").replace(/[^A-Za-z0-9]/g, "").slice(0, 10);
-  return short ? `${entry}_gen_${slug}_${short}` : `${entry}_gen_${slug}`;
+  const q = igQualityLabel(quality, modelKey);
+  const base = short ? `${entry}_gen_${slug}_${short}` : `${entry}_gen_${slug}`;
+  return q ? `${base}_${q}` : base;
 }
 
 const igState = {
@@ -5594,7 +5689,7 @@ async function igRunBatch() {
   } else {
     // Fresh generations are named after the model: gen_<Model>_<n>
     igState.items = [{
-      name: `gen_${igModelSlug(cfg.model)}_1`,
+      name: igNewCardName(cfg, 1),
       source: null,
       status: "pending", loading: false,
       variants: [], activeVariant: 0, total: cfg.variations
@@ -5612,7 +5707,7 @@ async function igRunBulkSelected(cfg, check, rowIndices) {
     const varValues = {};
     check.vars.forEach(v => { varValues[v] = row[v]; });
     return {
-      name: bulkCardName(row, data.headers, rowIdx, cfg.model, firstVar),
+      name: bulkCardName(row, data.headers, rowIdx, cfg.model, firstVar, cfg.quality),
       source: null,
       prompt: applyRowToPrompt(cfg.prompt, row, data.headers),
       varValues,
@@ -5743,8 +5838,9 @@ function renderBulkModal() {
     const hint = document.createElement("div");
     hint.style.cssText = "margin-top:14px;color:#6b7280;font-size:12px;line-height:1.6;";
     hint.textContent =
-      "Variables must be UPPERCASE and start with VAR_ in both the prompt and the CSV header row, " +
-      "e.g. {VAR_MAIN_SUBJECT} in the prompt and a VAR_MAIN_SUBJECT column in the file.";
+      "Variables must be UPPERCASE and start with VAR_ in both the prompt and the CSV header row. " +
+      "Write them bare, without braces — e.g. VAR_MAIN_SUBJECT in the prompt and a " +
+      "VAR_MAIN_SUBJECT column in the file.";
     td.append(h, p, hint);
     tr.appendChild(td);
     wrap.appendChild(tr);
@@ -5826,7 +5922,7 @@ function renderBulkModal() {
     }
 
     const tdName = document.createElement("td");
-    tdName.textContent = bulkCardName(row, data.headers, i, cfg.model, firstVar);
+    tdName.textContent = bulkCardName(row, data.headers, i, cfg.model, firstVar, cfg.quality);
     tdName.style.fontFamily = "ui-monospace, SFMono-Regular, Menlo, monospace";
     tdName.style.fontSize = "11.5px";
     tr.appendChild(tdName);
@@ -5966,11 +6062,12 @@ async function igRegenerate(idx) {
     const row = data && data.rows[item.bulkRowIndex];
     const firstVar = item.varValues && Object.keys(item.varValues)[0];
     if (row && firstVar) {
-      item.name = bulkCardName(row, data.headers, item.bulkRowIndex, cfg.model, firstVar);
+      item.name = bulkCardName(row, data.headers, item.bulkRowIndex, cfg.model, firstVar, cfg.quality);
     }
   } else {
-    const n = item.name.match(/_(\d+)$/);
-    item.name = `gen_${igModelSlug(cfg.model)}_${n ? n[1] : 1}`;
+    // Recover the sequence number from gen_<Model>_<n>[_<Quality>].
+    const n = item.name.match(/^gen_.*?_(\d+)(?:_[^_]+)?$/);
+    item.name = igNewCardName(cfg, n ? n[1] : 1);
   }
   item.loading = true;
   item.status = "pending";
