@@ -4931,12 +4931,16 @@ const IG_VAR_PREFIX = "VAR_";
    Always uppercase and always VAR_ prefixed, which keeps detection
    unambiguous without needing delimiters. Braced forms ({VAR_X}, {{VAR_X}})
    are still accepted so older prompts keep working. */
-const IG_VAR_RE = /\{\{?\s*(VAR_[A-Z0-9_]+)\s*\}?\}|\b(VAR_[A-Z0-9_]+)\b/g;
+/* Name characters after the VAR_ prefix. Hyphens are allowed because
+   suffixed sets like VAR_MAIN_QUESTION-1 … -4 are a natural way to write
+   repeated slots, and CSV headers use the identical spelling. */
+const IG_VAR_NAME = "VAR_[A-Z0-9_-]*[A-Z0-9]";
+const IG_VAR_RE = new RegExp(`\\{\\{?\\s*(${IG_VAR_NAME})\\s*\\}?\\}|\\b(${IG_VAR_NAME})\\b`, "g");
 
 /* Tokens that look like an attempted variable but break the rule: anything
    braced that is not a valid VAR_, or a lowercase var_ token. Bare uppercase
    words are NOT flagged — ordinary prose would produce endless false hits. */
-const IG_NEARMISS_RE = /\{\{?\s*([A-Za-z_][A-Za-z0-9_]*)\s*\}?\}|\b(var_[A-Za-z0-9_]+)\b/g;
+const IG_NEARMISS_RE = /\{\{?\s*([A-Za-z_][A-Za-z0-9_-]*)\s*\}?\}|\b(var_[A-Za-z0-9_-]*[A-Za-z0-9])\b/gi;
 
 function extractPromptVariables(text) {
   const found = [];
@@ -4989,7 +4993,20 @@ function csvVariableHeaders(headers) {
    A blind replace would turn that into `Baby Lion Cub: "Baby Sea Turtle"`.
    So a declaration line keeps its name and only its quoted value is refreshed
    to the current row; every other line has its VAR_ tokens replaced. */
-const IG_DECL_LINE_RE = /^([ \t]*)(VAR_[A-Z0-9_]+)([ \t]*:[ \t]*)(".*"|[^\n]*)$/;
+/* A declaration is ONLY the explicit quoted form, alone on its line:
+
+     VAR_TITLE: "Animal Quiz"
+
+   The quotes are what make it unambiguous. An unquoted line such as
+   `VAR_TITLE: Show VAR_IMAGE here` or `VAR_QUESTION: appears at the top` is
+   ordinary prose — treating those as declarations used to overwrite the rest
+   of the line and silently delete any other variables on it. */
+/* Straight and curly quotes both count — prompts written in a word processor
+   arrive with “smart quotes”, and the opening/closing pair must be allowed to
+   differ. */
+const IG_DECL_LINE_RE = new RegExp(
+  `^([ \\t]*)(${IG_VAR_NAME})([ \\t]*:[ \\t]*)(["\u201C\u201D\u2018\u2019])([^"\u201C\u201D\u2018\u2019\\n]*)(["\u201C\u201D\u2018\u2019])[ \\t]*$`
+);
 
 function applyRowToPrompt(text, row, headers) {
   const has = (k) => Object.prototype.hasOwnProperty.call(row, k);
@@ -4997,12 +5014,11 @@ function applyRowToPrompt(text, row, headers) {
   return String(text || "").split("\n").map(line => {
     const decl = IG_DECL_LINE_RE.exec(line);
     if (decl && has(decl[2])) {
-      const [, indent, name, sep, rawValue] = decl;
-      // Preserve whether the original value was quoted.
-      const quoted = /^".*"$/.test(rawValue.trim());
-      const v = row[name];
-      return `${indent}${name}${sep}${quoted ? `"${v}"` : v}`;
+      const [, indent, name, sep, openQ, , closeQ] = decl;
+      // Keep whatever quote style the author used.
+      return `${indent}${name}${sep}${openQ}${row[name]}${closeQ}`;
     }
+    // Every other line: substitute each VAR_ token in place, losing nothing.
     return line.replace(IG_VAR_RE, (whole, braced, bare) => {
       const name = braced || bare;
       return has(name) ? row[name] : whole;
@@ -5012,7 +5028,7 @@ function applyRowToPrompt(text, row, headers) {
 
 /* Confirm the CSV can actually drive this prompt before anything is sent. */
 function validateBulkData(promptText, data) {
-  const vars = extractPromptVariables(promptText);
+  let vars = extractPromptVariables(promptText);
   if (!data || !data.rows) return { ok: false, error: "No data file loaded." };
 
   if (vars.length === 0) {
@@ -5031,7 +5047,20 @@ function validateBulkData(promptText, data) {
   }
 
   const headerSet = new Set(data.headers.map(h => String(h).trim()));
-  const missing = vars.filter(v => !headerSet.has(v));
+  const headerList = [...headerSet];
+
+  /* A prompt often refers to a numbered SET by its shared stem — e.g.
+     "For each VAR_MAIN_QUESTION:" while the columns are
+     VAR_MAIN_QUESTION-1 … -4. That stem is prose, not a placeholder, so it
+     must not be demanded as its own column. The suffix has to be numeric so
+     a genuine typo (VAR_TITL vs VAR_TITLE) is still caught. */
+  const isFamilyStem = (v) =>
+    headerList.some(h => new RegExp(`^${v.replace(/[.*+?^${}()|[\]\\-]/g, "\\$&")}[-_]\\d+$`).test(h));
+
+  const unmatched = vars.filter(v => !headerSet.has(v));
+  const familyStems = unmatched.filter(isFamilyStem);
+  const missing = unmatched.filter(v => !familyStems.includes(v));
+
   if (missing.length) {
     const csvVars = csvVariableHeaders(data.headers);
     return { ok: false, error:
@@ -5041,6 +5070,9 @@ function validateBulkData(promptText, data) {
         : `That file has no ${IG_VAR_PREFIX} columns at all — its headers are: ${data.headers.filter(Boolean).join(", ")}.`) };
   }
 
+  // Only names backed by a real column drive substitution and naming.
+  vars = vars.filter(v => headerSet.has(v));
+
   // A variable whose every cell is empty would silently blank the prompt.
   const allEmpty = vars.filter(v => data.rows.every(r => !String(r[v] || "").trim()));
   if (allEmpty.length) {
@@ -5048,7 +5080,29 @@ function validateBulkData(promptText, data) {
       `Column${allEmpty.length > 1 ? "s" : ""} ${allEmpty.join(", ")} in "${data.name}" ` +
       `${allEmpty.length > 1 ? "are" : "is"} empty for every row.` };
   }
-  return { ok: true, vars, rowCount: data.rows.length };
+
+  /* Non-blocking notes. A VAR_-looking token in the wrong case is invisible
+     to substitution and would be sent to the model literally, so it is worth
+     surfacing even when everything else checks out. */
+  const warnings = [];
+  if (familyStems.length) {
+    warnings.push(
+      `${familyStems.join(", ")} ${familyStems.length > 1 ? "are" : "is"} a group reference to the ` +
+      `numbered columns and stays as written — only the numbered names are substituted.`);
+  }
+  const miscased = findNearMissPlaceholders(promptText)
+    .filter(t => /^var_/i.test(t) && t !== t.toUpperCase());
+  if (miscased.length) {
+    warnings.push(
+      `${miscased.join(", ")} ${miscased.length > 1 ? "are" : "is"} not UPPERCASE, ` +
+      `so ${miscased.length > 1 ? "they are" : "it is"} treated as ordinary text, not a variable.`);
+  }
+  const unusedCsvVars = csvVariableHeaders(data.headers).filter(h => !vars.includes(h));
+  if (unusedCsvVars.length) {
+    warnings.push(`${unusedCsvVars.join(", ")} in the file ${unusedCsvVars.length > 1 ? "are" : "is"} never used by the prompt.`);
+  }
+
+  return { ok: true, vars, rowCount: data.rows.length, warnings };
 }
 
 /* ===========================================================
@@ -5362,7 +5416,9 @@ function igMakeDataThumb(data, onRemove) {
       `${data.rows.length} row${data.rows.length === 1 ? "" : "s"} · ` +
       `${check.vars.length} var${check.vars.length === 1 ? "" : "s"} matched` +
       (doneCount ? ` · ${doneCount} done` : "");
-    inner.title = "Click to view the data file and its current state";
+    inner.title = (check.warnings && check.warnings.length)
+      ? "Note: " + check.warnings.join("  ") + "\n\nClick to view the data file and its current state"
+      : "Click to view the data file and its current state";
     inner.style.cursor = "pointer";
     inner.onclick = () => openBulkModal(igReadConfig(), check, { mode: "view" });
   } else {
@@ -5855,10 +5911,17 @@ function renderBulkModal() {
   const firstVar = vars[0];
 
   const doneCount = igState.bulkGenerated.size;
-  document.getElementById("bulkSubtitle").textContent =
+  const sub = document.getElementById("bulkSubtitle");
+  sub.textContent =
     `${data.name} — ${data.rows.length} entr${data.rows.length === 1 ? "y" : "ies"}, ` +
     `${vars.length} variable${vars.length === 1 ? "" : "s"}: ${vars.join(", ")}` +
     (isRun ? "" : ` · ${doneCount} already generated`);
+  if (check.warnings && check.warnings.length) {
+    const w = document.createElement("div");
+    w.style.cssText = "margin-top:5px;color:#b45309;font-size:12px;line-height:1.5;";
+    w.textContent = "⚠ " + check.warnings.join("  ");
+    sub.appendChild(w);
+  }
 
   // Extra (non-variable) columns are shown for context but greyed in the head.
   const extraCols = data.headers
