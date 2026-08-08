@@ -407,6 +407,62 @@
     text-transform: uppercase;
     letter-spacing: 0.5px;
   }
+  /* Results heading row: title left, "Show All" right */
+  .results-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+  .results-head h2 { margin: 0; }
+  .show-all-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 6px 14px;
+    border: 1px solid #d1d5db;
+    border-radius: 7px;
+    background: #fff;
+    color: #374151;
+    font-size: 12.5px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .show-all-btn:hover:not(:disabled) { background: #f3f4f6; border-color: #9ca3af; }
+  .show-all-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+  .show-all-btn .sa-ico { font-size: 14px; line-height: 1; }
+  .show-all-btn .sa-count {
+    background: #eef2f7;
+    border-radius: 20px;
+    padding: 1px 7px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #4b5563;
+  }
+
+  /* Caption under the preview image, used by Show All */
+  .preview-caption {
+    position: absolute;
+    bottom: 62px; left: 50%;
+    transform: translateX(-50%);
+    max-width: 80vw;
+    background: rgba(17,24,39,0.85);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 6px 16px;
+    border-radius: 20px;
+    display: none;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    pointer-events: none;
+  }
+  .preview-caption.visible { display: block; }
   .grid-fields {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -1000,9 +1056,9 @@
   .ig-info .ig-info-mode { display: none; }
   .ig-info .ig-info-mode.active { display: block; }
 
-  /* Generate button — gradient, slightly larger label */
+  /* Generate button — appearance tracks the run state */
   #igStartBtn {
-    background-image: linear-gradient(90deg, #2563eb 0%, #7c3aed 100%);
+    background-image: linear-gradient(90deg, #ec4899 0%, #2563eb 100%);
     background-color: #2563eb;
     border: none;
     color: #fff;
@@ -1010,15 +1066,85 @@
     font-weight: 700;
     letter-spacing: 0.3px;
     padding: 9px 26px;
+    min-width: 150px;
+    /* No colour transition: the state must read instantly and must never be
+       left mid-fade if the renderer stops ticking animations. */
+    transition: none;
   }
   #igStartBtn:hover:not(:disabled) {
-    background-image: linear-gradient(90deg, #1d4ed8 0%, #6d28d9 100%);
+    background-image: linear-gradient(90deg, #db2777 0%, #1d4ed8 100%);
   }
   #igStartBtn:disabled {
     background-image: none;
     background-color: #c7ccd4;
     color: #fff;
   }
+  /* running — orange, stays orange even though it is disabled */
+  #igStartBtn.state-running,
+  #igStartBtn.state-running:disabled {
+    background-image: none;
+    background-color: #f97316;
+    color: #fff;
+    cursor: progress;
+    /* the generic button:disabled rule dims to 0.5 — the status colour must
+       stay fully saturated while a run is in flight */
+    opacity: 1;
+  }
+  /* finished — green */
+  #igStartBtn.state-done,
+  #igStartBtn.state-done:disabled {
+    background-image: none;
+    background-color: #16a34a;
+    color: #fff;
+    opacity: 1;
+  }
+  #igStartBtn.state-done:hover:not(:disabled) { background-color: #15803d; }
+  /* the "..." of Generating... animates one dot at a time */
+  .dot-anim > i {
+    font-style: normal;
+    opacity: 0;
+    animation: dotPulse 1.2s infinite;
+  }
+  .dot-anim > i:nth-child(2) { animation-delay: 0.2s; }
+  .dot-anim > i:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes dotPulse {
+    0%, 60%, 100% { opacity: 0; }
+    30%           { opacity: 1; }
+  }
+
+  /* ---------- generation progress bar ---------- */
+  .progress-wrap {
+    max-width: 1400px;
+    margin: 0 auto 18px;
+    padding: 0 20px;
+  }
+  .progress-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #6b7280;
+  }
+  .progress-track {
+    height: 10px;
+    border-radius: 6px;
+    background: #e5e7eb;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    width: 0%;
+    border-radius: 6px;
+    background: #9ca3af;                 /* idle */
+    /* Width animates; colour switches instantly so the state is unambiguous. */
+    transition: width 0.28s ease;
+  }
+  .progress-wrap.running .progress-fill { background: #f97316; }   /* in progress */
+  .progress-wrap.done    .progress-fill { background: #16a34a; }   /* finished */
+  .progress-wrap.running .progress-head { color: #c2410c; }
+  .progress-wrap.done    .progress-head { color: #15803d; }
 
   /* ---------- Generic confirm dialog ---------- */
   .confirm-modal {
@@ -1477,7 +1603,12 @@
   </div>
 
   <div class="section">
-    <h2>Results</h2>
+    <div class="results-head">
+      <h2>Results</h2>
+      <button type="button" id="showAllBtn" class="show-all-btn" disabled title="Preview every generated image">
+        <span class="sa-ico">🖼️</span>Show All<span class="sa-count" id="showAllCount">0</span>
+      </button>
+    </div>
     <div id="errorBanner" class="error-banner"></div>
     <div id="resultsGrid" class="results-grid">
       <div class="empty-state">No generations yet. Enter subjects and press START.</div>
@@ -1609,8 +1740,21 @@
     </div>
   </div>
 
+  <div id="igProgressWrap" class="progress-wrap">
+    <div class="progress-head">
+      <span id="igProgressLabel">Idle</span>
+      <span id="igProgressPct">0%</span>
+    </div>
+    <div class="progress-track"><div id="igProgressFill" class="progress-fill"></div></div>
+  </div>
+
   <div class="section">
-    <h2>Results</h2>
+    <div class="results-head">
+      <h2>Results</h2>
+      <button type="button" id="igShowAllBtn" class="show-all-btn" disabled title="Preview every generated image">
+        <span class="sa-ico">🖼️</span>Show All<span class="sa-count" id="igShowAllCount">0</span>
+      </button>
+    </div>
     <div id="igErrorBanner" class="error-banner"></div>
     <div id="igResultsGrid" class="results-grid">
       <div class="empty-state">No generations yet. Type a prompt and press GENERATE.</div>
@@ -1705,6 +1849,7 @@
   <button type="button" id="previewPrev" class="preview-nav prev" title="Previous">&#8249;</button>
   <div id="previewStage" class="preview-stage"><img id="previewImg" alt="" /></div>
   <button type="button" id="previewNext" class="preview-nav next" title="Next">&#8250;</button>
+  <div id="previewCaption" class="preview-caption"></div>
   <div id="previewCounter" class="preview-counter"></div>
   <div id="previewZoomBadge" class="preview-zoom-badge"></div>
 </div>
@@ -3811,6 +3956,7 @@ function updateErrorBanner() {
 function updateDownloadAllBtn() {
   const anyDone = state.items.some(i => i.status === "done");
   document.getElementById("downloadAllBtn").disabled = !anyDone;
+  updateShowAllBtn();
 }
 
 function updateStatus(msg) {
@@ -4016,8 +4162,12 @@ function openPreview(dataUrl) {
   openPreviewList([dataUrl], 0);
 }
 
+/* Accepts plain data URLs, or {url, label} entries when the caller wants a
+   name shown under the picture (used by Show All). */
 function openPreviewList(urls, index) {
-  const list = (urls || []).filter(Boolean);
+  const list = (urls || [])
+    .map(u => (typeof u === "string" ? { url: u, label: "" } : u))
+    .filter(e => e && e.url);
   if (list.length === 0) return;
   previewCtx = { urls: list, index: Math.min(Math.max(parseInt(index, 10) || 0, 0), list.length - 1) };
   resetPreviewZoom();
@@ -4029,11 +4179,16 @@ function renderPreview() {
   if (!previewCtx) return;
   const { urls, index } = previewCtx;
   const modal = document.getElementById("previewModal");
-  document.getElementById("previewImg").src = urls[index];
+  const entry = urls[index];
+  document.getElementById("previewImg").src = entry.url;
   modal.classList.toggle("has-nav", urls.length > 1);
   document.getElementById("previewPrev").disabled = index <= 0;
   document.getElementById("previewNext").disabled = index >= urls.length - 1;
   document.getElementById("previewCounter").textContent = `${index + 1} / ${urls.length}`;
+  const cap = document.getElementById("previewCaption");
+  cap.textContent = entry.label || "";
+  cap.classList.toggle("visible", !!entry.label);
+  cap.title = entry.label || "";
 }
 
 function resetPreviewZoom() {
@@ -4103,6 +4258,7 @@ function closePreview() {
   modal.classList.remove("visible", "has-nav");
   document.getElementById("previewStage").classList.remove("panning", "at-max");
   document.getElementById("previewZoomBadge").classList.remove("visible");
+  document.getElementById("previewCaption").classList.remove("visible");
   document.getElementById("previewImg").src = "";
   previewZoomStep = 0;
   previewCtx = null;
@@ -5247,6 +5403,53 @@ function igPopulateAspectDropdown(preserveValue) {
   sel.value = (prev && Array.from(sel.options).some(o => o.value === prev)) ? prev : IG_CUSTOM_RATIO;
 }
 
+/* ---------- Generate button state ----------
+   idle     pink→blue gradient, "Generate"
+   running  orange, "Generating" with animated dots
+   done     green, "Generated"                                */
+function igSetGenerateState(state) {
+  const btn = document.getElementById("igStartBtn");
+  if (!btn) return;
+  btn.classList.remove("state-running", "state-done");
+  if (state === "running") {
+    btn.classList.add("state-running");
+    btn.innerHTML = 'GENERATING<span class="dot-anim"><i>.</i><i>.</i><i>.</i></span>';
+  } else if (state === "done") {
+    btn.classList.add("state-done");
+    btn.textContent = "GENERATED";
+  } else {
+    btn.textContent = "GENERATE";
+  }
+}
+
+/* ---------- progress bar ----------
+   gray when idle, orange while working, green when finished. */
+function igSetProgress(state, done, total) {
+  const wrap = document.getElementById("igProgressWrap");
+  const fill = document.getElementById("igProgressFill");
+  const label = document.getElementById("igProgressLabel");
+  const pctEl = document.getElementById("igProgressPct");
+  if (!wrap) return;
+  wrap.classList.remove("running", "done");
+  if (state === "idle") {
+    fill.style.width = "0%";
+    label.textContent = "Idle";
+    pctEl.textContent = "0%";
+    return;
+  }
+  const t = Math.max(1, total || 0);
+  const pct = Math.round((done / t) * 100);
+  fill.style.width = pct + "%";
+  pctEl.textContent = pct + "%";
+  if (state === "running") {
+    wrap.classList.add("running");
+    label.textContent = `Generating ${done} / ${total}`;
+  } else {
+    wrap.classList.add("done");
+    label.textContent = `Finished — ${done} / ${total} generated`;
+  }
+}
+
 function igRefreshStartBtn() {
   const btn = document.getElementById("igStartBtn");
   if (igState.running) { btn.disabled = true; return; }
@@ -5308,6 +5511,9 @@ function igRefreshModeUI() {
   if (isBulk && igState.dataFile) refreshBulkGeneratedFromStorage();
   igRenderThumbs();
   igRefreshStartBtn();
+  // Editing the prompt or mode means the next press is a fresh run, so drop
+  // the green "Generated" badge back to the normal state.
+  if (!igState.running) igSetGenerateState("idle");
 }
 
 // Show only the explanation block matching the current Generation Mode.
@@ -5704,6 +5910,70 @@ function igUpdateErrorBanner() {
 
 function igUpdateDownloadAllBtn() {
   document.getElementById("igDownloadAllBtn").disabled = !igState.items.some(i => i.status === "done");
+  igUpdateShowAllBtn();
+}
+
+/* ---------- Show All ----------
+   Every finished image, including each variation, flattened into one list
+   for the preview. The label carries the image's name (plus its variation
+   index when a card holds several). */
+function igCollectAllImages() {
+  const out = [];
+  for (const item of igState.items) {
+    if (item.status !== "done" || !item.variants) continue;
+    item.variants.forEach((v, i) => {
+      out.push({
+        url: v.dataUrl,
+        label: item.variants.length > 1
+          ? `${item.name}  (${i + 1} of ${item.variants.length})`
+          : item.name
+      });
+    });
+  }
+  return out;
+}
+
+function igUpdateShowAllBtn() {
+  const btn = document.getElementById("igShowAllBtn");
+  const countEl = document.getElementById("igShowAllCount");
+  if (!btn) return;
+  const n = igCollectAllImages().length;
+  btn.disabled = n === 0;
+  if (countEl) countEl.textContent = n;
+  btn.title = n === 0
+    ? "Nothing generated yet"
+    : `Preview all ${n} generated image${n === 1 ? "" : "s"}`;
+}
+
+function igShowAll() {
+  const all = igCollectAllImages();
+  if (all.length === 0) return;
+  openPreviewList(all, 0);
+}
+
+/* Same idea for the How to Draw page, where each card holds one image. */
+function collectAllImages() {
+  return state.items
+    .filter(i => i.status === "done" && i.dataUrl)
+    .map(i => ({ url: i.dataUrl, label: drawFileBaseName(i) }));
+}
+
+function updateShowAllBtn() {
+  const btn = document.getElementById("showAllBtn");
+  const countEl = document.getElementById("showAllCount");
+  if (!btn) return;
+  const n = collectAllImages().length;
+  btn.disabled = n === 0;
+  if (countEl) countEl.textContent = n;
+  btn.title = n === 0
+    ? "Nothing generated yet"
+    : `Preview all ${n} generated image${n === 1 ? "" : "s"}`;
+}
+
+function showAllDraw() {
+  const all = collectAllImages();
+  if (all.length === 0) return;
+  openPreviewList(all, 0);
 }
 
 function igUpdateStatus(msg) {
@@ -5790,6 +6060,8 @@ async function igStartGeneration(cfg) {
 
   let completed = 0;
   const total = igState.items.length;
+  igSetGenerateState("running");
+  igSetProgress("running", 0, total);
   igUpdateStatus(`Generating 0 / ${total}...`);
 
   const queue = igState.items.map((_, i) => i);
@@ -5800,6 +6072,7 @@ async function igStartGeneration(cfg) {
         const idx = queue.shift();
         await igGenerateOne(idx, cfg);
         completed++;
+        igSetProgress("running", completed, total);
         igUpdateStatus(`Generating ${completed} / ${total}...`);
       }
     })());
@@ -5825,8 +6098,12 @@ async function igStartGeneration(cfg) {
     saveBulkGeneratedFor(key, merged);
     igRenderThumbs();
   }
+  const succeeded = igState.items.filter(i => i.status === "done").length;
+  igSetProgress("done", succeeded, total);
   igRefreshStartBtn();
-  igUpdateStatus(`Done. ${igState.items.filter(i => i.status === "done").length} / ${total} succeeded.`);
+  // Show the finished state only if something actually came back.
+  igSetGenerateState(succeeded > 0 ? "done" : "idle");
+  igUpdateStatus(`Done. ${succeeded} / ${total} succeeded.`);
 }
 
 /* ===========================================================
@@ -6225,6 +6502,9 @@ async function igResetAll() {
   igUpdateErrorBanner();
   igUpdateDownloadAllBtn();
   igUpdateStatus("");
+  igSetGenerateState("idle");
+  igSetProgress("idle");
+  igRefreshStartBtn();
 }
 
 // Escape user-supplied text before putting it in the dialog's innerHTML.
@@ -6258,6 +6538,8 @@ function igResetEverything() {
   igUpdateErrorBanner();
   igUpdateDownloadAllBtn();
   igUpdateStatus("");
+  igSetGenerateState("idle");
+  igSetProgress("idle");
   refreshSaveConfigStatus();
 }
 
@@ -6411,6 +6693,8 @@ document.addEventListener("keydown", (e) => {
 document.getElementById("igStartBtn").addEventListener("click", igRunBatch);
 document.getElementById("igResetBtn").addEventListener("click", igResetAll);
 document.getElementById("igDownloadAllBtn").addEventListener("click", igDownloadAll);
+document.getElementById("igShowAllBtn").addEventListener("click", igShowAll);
+document.getElementById("showAllBtn").addEventListener("click", showAllDraw);
 document.getElementById("igCostReset").addEventListener("click", resetCostCounter);
 document.getElementById("igBalanceAmount").addEventListener("click", promptSetBalance);
 document.getElementById("igSaveConfigBtn").addEventListener("click", openSaveModal);
@@ -6487,9 +6771,13 @@ populateQualityDropdown();
 igPopulateQualityDropdown();
 igPopulateAspectDropdown();
 setHeaderIcon(currentPage);
+igSetGenerateState("idle");
+igSetProgress("idle");
 igRefreshModeUI();
 igRefreshStartBtn();
 igRenderGrid();
+igUpdateShowAllBtn();
+updateShowAllBtn();
 refreshStartBtn();
 loadCostState();
 updateCostCounter();
