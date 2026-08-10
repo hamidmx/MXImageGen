@@ -1056,49 +1056,74 @@
   .ig-info .ig-info-mode { display: none; }
   .ig-info .ig-info-mode.active { display: block; }
 
-  /* Generate button — appearance tracks the run state */
+  /* Generate button — the button itself is the progress indicator.
+     idle     blue → pink
+     running  orange → yellow, painted across the finished share only
+     done     green → turquoise                                        */
   #igStartBtn {
-    background-image: linear-gradient(90deg, #ec4899 0%, #2563eb 100%);
+    background-image: linear-gradient(90deg, #2563eb 0%, #ec4899 100%);
     background-color: #2563eb;
     border: none;
     color: #fff;
     font-size: 15px;
     font-weight: 700;
     letter-spacing: 0.3px;
-    padding: 9px 26px;
-    min-width: 150px;
+    /* 30% wider than the previous 150px / 26px so the running label and its
+       animated dots never reflow the button. */
+    padding: 9px 34px;
+    min-width: 195px;
     /* No colour transition: the state must read instantly and must never be
        left mid-fade if the renderer stops ticking animations. */
     transition: none;
   }
   #igStartBtn:hover:not(:disabled) {
-    background-image: linear-gradient(90deg, #db2777 0%, #1d4ed8 100%);
+    background-image: linear-gradient(90deg, #1d4ed8 0%, #db2777 100%);
   }
   #igStartBtn:disabled {
     background-image: none;
     background-color: #c7ccd4;
     color: #fff;
   }
-  /* running — orange, stays orange even though it is disabled */
+  /* running — a progressive background behind the "GENERATING ..." label.
+
+     Two layers. The bottom one is the orange→yellow gradient stretched across
+     the WHOLE button, so the ramp is visible the entire time (a single-image
+     run sits at 0% for its whole duration) and every colour stays pinned to
+     its final position. The top one is a light shade over the part not
+     generated yet; JS shrinks it from the right, so the gradient brightens
+     left-to-right as requests land. Sizing the gradient itself instead would
+     squeeze the whole ramp into the filled sliver and make the colours crawl.
+
+     The shade is deliberately gentle — it has to read as "this part is still
+     pending", not hide the gradient underneath it. */
   #igStartBtn.state-running,
   #igStartBtn.state-running:disabled {
-    background-image: none;
+    background-image:
+      linear-gradient(90deg, rgba(124, 45, 18, 0.22) 0%, rgba(124, 45, 18, 0.22) 100%),
+      linear-gradient(90deg, #f97316 0%, #fbbf24 55%, #fde047 100%);
     background-color: #f97316;
+    background-repeat: no-repeat, no-repeat;
+    background-position: right center, left center;
+    background-size: 100% 100%, 100% 100%;   /* shade full width = 0% progress */
     color: #fff;
+    /* keeps the label legible over both the shaded track and the yellow end */
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
     cursor: progress;
     /* the generic button:disabled rule dims to 0.5 — the status colour must
        stay fully saturated while a run is in flight */
     opacity: 1;
   }
-  /* finished — green */
+  /* finished — green → turquoise */
   #igStartBtn.state-done,
   #igStartBtn.state-done:disabled {
-    background-image: none;
+    background-image: linear-gradient(90deg, #16a34a 0%, #14b8a6 100%);
     background-color: #16a34a;
     color: #fff;
     opacity: 1;
   }
-  #igStartBtn.state-done:hover:not(:disabled) { background-color: #15803d; }
+  #igStartBtn.state-done:hover:not(:disabled) {
+    background-image: linear-gradient(90deg, #15803d 0%, #0d9488 100%);
+  }
   /* the "..." of Generating... animates one dot at a time */
   .dot-anim > i {
     font-style: normal;
@@ -1111,40 +1136,6 @@
     0%, 60%, 100% { opacity: 0; }
     30%           { opacity: 1; }
   }
-
-  /* ---------- generation progress bar ---------- */
-  .progress-wrap {
-    max-width: 1400px;
-    margin: 0 auto 18px;
-    padding: 0 20px;
-  }
-  .progress-head {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    margin-bottom: 6px;
-    font-size: 12px;
-    font-weight: 600;
-    color: #6b7280;
-  }
-  .progress-track {
-    height: 10px;
-    border-radius: 6px;
-    background: #e5e7eb;
-    overflow: hidden;
-  }
-  .progress-fill {
-    height: 100%;
-    width: 0%;
-    border-radius: 6px;
-    background: #9ca3af;                 /* idle */
-    /* Width animates; colour switches instantly so the state is unambiguous. */
-    transition: width 0.28s ease;
-  }
-  .progress-wrap.running .progress-fill { background: #f97316; }   /* in progress */
-  .progress-wrap.done    .progress-fill { background: #16a34a; }   /* finished */
-  .progress-wrap.running .progress-head { color: #c2410c; }
-  .progress-wrap.done    .progress-head { color: #15803d; }
 
   /* ---------- Generic confirm dialog ---------- */
   .confirm-modal {
@@ -1738,14 +1729,6 @@
       <span id="igSaveConfigWarning" class="save-config-warning"></span>
       <span class="status" id="igStatus"></span>
     </div>
-  </div>
-
-  <div id="igProgressWrap" class="progress-wrap">
-    <div class="progress-head">
-      <span id="igProgressLabel">Idle</span>
-      <span id="igProgressPct">0%</span>
-    </div>
-    <div class="progress-track"><div id="igProgressFill" class="progress-fill"></div></div>
   </div>
 
   <div class="section">
@@ -4925,22 +4908,41 @@ function setHeaderIcon(page) {
    button wording.
    =========================================================== */
 let confirmResolver = null;
+// What each exit resolves with. Dismissing (Esc / backdrop) is kept separate
+// from pressing Cancel so a dialog whose two buttons are both real choices
+// can tell "the user picked No" apart from "the user backed out".
+let confirmValues = { ok: true, cancel: false, dismiss: false };
 
-function showConfirm({ title, bodyHtml, okLabel = "OK", cancelLabel = "Cancel" }) {
+function showConfirm({
+  title, bodyHtml,
+  okLabel = "OK", cancelLabel = "Cancel",
+  okValue = true, cancelValue = false, dismissValue,
+  okDanger = true, cancelDanger = false
+}) {
   const modal = document.getElementById("confirmModal");
+  const okBtn = document.getElementById("confirmOkBtn");
+  const cancelBtn = document.getElementById("confirmCancelBtn");
   document.getElementById("confirmTitle").textContent = title;
   document.getElementById("confirmBody").innerHTML = bodyHtml;
-  document.getElementById("confirmOkBtn").textContent = okLabel;
-  document.getElementById("confirmCancelBtn").textContent = cancelLabel;
+  okBtn.textContent = okLabel;
+  cancelBtn.textContent = cancelLabel;
+  okBtn.classList.toggle("danger", okDanger);
+  cancelBtn.classList.toggle("danger", cancelDanger);
+  confirmValues = {
+    ok: okValue,
+    cancel: cancelValue,
+    dismiss: dismissValue === undefined ? cancelValue : dismissValue
+  };
   modal.classList.add("visible");
   return new Promise(resolve => { confirmResolver = resolve; });
 }
 
-function settleConfirm(result) {
+/* which: "ok" | "cancel" | "dismiss" */
+function settleConfirm(which) {
   document.getElementById("confirmModal").classList.remove("visible");
   const r = confirmResolver;
   confirmResolver = null;
-  if (r) r(result);
+  if (r) r(confirmValues[which]);
 }
 
 function openSideMenu()  { document.getElementById("sideMenu").classList.add("open");    document.getElementById("menuBackdrop").classList.add("visible"); }
@@ -5364,7 +5366,8 @@ const igState = {
   refImage: null,   // { name, base64, mime, dataUrl }
   dataFile: null,   // bulk mode: { name, headers:[], rows:[{col:value}] }
   bulkGenerated: new Set(),  // row indices already generated OK this session
-  bulkSelection: new Set()   // row indices ticked in the picker
+  bulkSelection: new Set(),  // row indices ticked in the picker
+  appendResults: false       // this run adds to the shown results instead of replacing them
 };
 
 function igReadConfig() {
@@ -5404,49 +5407,40 @@ function igPopulateAspectDropdown(preserveValue) {
 }
 
 /* ---------- Generate button state ----------
-   idle     pink→blue gradient, "Generate"
-   running  orange, "Generating" with animated dots
-   done     green, "Generated"                                */
-function igSetGenerateState(state) {
+   The button doubles as the progress indicator, so there is no separate bar.
+
+   idle     blue→pink gradient, "GENERATE"
+   running  "GENERATING" with animated dots over an orange→yellow gradient
+            that is painted across the finished share of the run only
+   done     green→turquoise gradient, "GENERATED"                        */
+function igSetGenerateState(state, done, total) {
   const btn = document.getElementById("igStartBtn");
   if (!btn) return;
+  const wasRunning = btn.classList.contains("state-running");
   btn.classList.remove("state-running", "state-done");
+
   if (state === "running") {
     btn.classList.add("state-running");
-    btn.innerHTML = 'GENERATING<span class="dot-anim"><i>.</i><i>.</i><i>.</i></span>';
-  } else if (state === "done") {
+    // Rewriting the label would restart the dot animation on every tick, so
+    // it is written once on the way into the running state.
+    if (!wasRunning) {
+      btn.innerHTML = 'GENERATING<span class="dot-anim"><i>.</i><i>.</i><i>.</i></span>';
+    }
+    const t = Math.max(1, total || 0);
+    const pct = Math.round((Math.min(done || 0, t) / t) * 100);
+    // Layer 1 is the veil over the not-yet-generated part (anchored right),
+    // layer 2 the full-width orange→yellow gradient it uncovers.
+    btn.style.backgroundSize = `${100 - pct}% 100%, 100% 100%`;
+    btn.title = `Generating ${done || 0} / ${total || 0}`;
+    return;
+  }
+
+  btn.style.backgroundSize = "";        // drop back to the CSS gradient
+  if (state === "done") {
     btn.classList.add("state-done");
     btn.textContent = "GENERATED";
   } else {
     btn.textContent = "GENERATE";
-  }
-}
-
-/* ---------- progress bar ----------
-   gray when idle, orange while working, green when finished. */
-function igSetProgress(state, done, total) {
-  const wrap = document.getElementById("igProgressWrap");
-  const fill = document.getElementById("igProgressFill");
-  const label = document.getElementById("igProgressLabel");
-  const pctEl = document.getElementById("igProgressPct");
-  if (!wrap) return;
-  wrap.classList.remove("running", "done");
-  if (state === "idle") {
-    fill.style.width = "0%";
-    label.textContent = "Idle";
-    pctEl.textContent = "0%";
-    return;
-  }
-  const t = Math.max(1, total || 0);
-  const pct = Math.round((done / t) * 100);
-  fill.style.width = pct + "%";
-  pctEl.textContent = pct + "%";
-  if (state === "running") {
-    wrap.classList.add("running");
-    label.textContent = `Generating ${done} / ${total}`;
-  } else {
-    wrap.classList.add("done");
-    label.textContent = `Finished — ${done} / ${total} generated`;
   }
 }
 
@@ -5980,6 +5974,78 @@ function igUpdateStatus(msg) {
   document.getElementById("igStatus").textContent = msg || "";
 }
 
+/* ---------- keeping or clearing what is already on screen ----------
+
+   A run either appends to the results already shown or replaces them. The
+   question is asked once, when Generate is pressed, and only when there is
+   actually something to lose. */
+function igCountExistingImages() {
+  return igState.items.reduce(
+    (n, it) => n + (it.status === "done" && it.variants ? it.variants.length : 0), 0
+  );
+}
+
+/* Resolves "yes" (keep and add to them), "no" (remove them first) or
+   "cancel" (backed out — do not generate at all). */
+async function igAskKeepExisting() {
+  const images = igCountExistingImages();
+  if (images === 0) return "no";          // nothing on screen: no dialog
+
+  const cards = igState.items.filter(i => i.status === "done" && i.variants && i.variants.length).length;
+  return showConfirm({
+    title: "Keep the images already generated?",
+    bodyHtml:
+      `<p>This page is showing <strong>${images} generated image${images === 1 ? "" : "s"}</strong>` +
+      `${cards !== images ? ` across ${cards} card${cards === 1 ? "" : "s"}` : ""}.</p>` +
+      "<ul>" +
+      "<li><strong>Yes</strong> — keep them; the new images are added underneath.</li>" +
+      "<li><strong>No</strong> — clear them; only the new images are shown.</li>" +
+      "</ul>" +
+      "<p style=\"margin-top:10px;\">Images you already downloaded are not affected either way.</p>",
+    okLabel: "Yes — keep and add",
+    cancelLabel: "No — remove them",
+    okValue: "yes",
+    cancelValue: "no",
+    dismissValue: "cancel",
+    okDanger: false,          // keeping is the safe choice
+    cancelDanger: true        // removing is the destructive one — flag it red
+  });
+}
+
+/* Puts a freshly-built batch into igState.items, either appending to what is
+   already there or replacing it, and returns the index the new cards start
+   at so only they get queued. Appended names are made unique so ZIP entries
+   never collide. */
+function igStageItems(newItems) {
+  if (!igState.appendResults || igState.items.length === 0) {
+    igState.items = newItems;
+    return 0;
+  }
+  const taken = new Set(igState.items.map(i => i.name));
+  for (const it of newItems) {
+    let name = it.name, n = 2;
+    while (taken.has(name)) name = `${it.name}_${n++}`;
+    taken.add(name);
+    it.name = name;
+  }
+  const offset = igState.items.length;
+  igState.items = igState.items.concat(newItems);
+  return offset;
+}
+
+/* New-mode cards are gen_<Model>_<n>: continue the sequence when appending
+   rather than restarting at 1. */
+function igNextNewOrdinal(cfg) {
+  if (!igState.appendResults) return 1;
+  const re = new RegExp(`^gen_${igModelSlug(cfg.model)}_(\\d+)`);
+  let max = 0;
+  for (const it of igState.items) {
+    const m = String(it.name || "").match(re);
+    if (m) max = Math.max(max, parseInt(m[1], 10));
+  }
+  return max + 1;
+}
+
 /* ---------- generation flow ----------
 
    Generate button. Bulk mode does not fire immediately: it opens the entry
@@ -5988,6 +6054,11 @@ function igUpdateStatus(msg) {
 async function igRunBatch() {
   const cfg = igReadConfig();
   if (!cfg.prompt.trim()) return;
+
+  // Decided up front so the answer also covers the bulk entry picker below.
+  const keep = await igAskKeepExisting();
+  if (keep === "cancel") return;
+  igState.appendResults = keep === "yes";
 
   if (cfg.mode === "bulk") {
     if (!igState.dataFile) {
@@ -6004,9 +6075,10 @@ async function igRunBatch() {
   }
 
   const editMode = cfg.mode === "edit" && igState.editImages.length > 0;
+  let batch;
   if (editMode) {
     // One result card per source image in Edit mode.
-    igState.items = igState.editImages.map(img => ({
+    batch = igState.editImages.map(img => ({
       name: igEditCardName(img.name, cfg),
       source: img,
       status: "pending", loading: false,
@@ -6014,21 +6086,21 @@ async function igRunBatch() {
     }));
   } else {
     // Fresh generations are named after the model: gen_<Model>_<n>
-    igState.items = [{
-      name: igNewCardName(cfg, 1),
+    batch = [{
+      name: igNewCardName(cfg, igNextNewOrdinal(cfg)),
       source: null,
       status: "pending", loading: false,
       variants: [], activeVariant: 0, total: cfg.variations
     }];
   }
-  await igStartGeneration(cfg);
+  await igStartGeneration(cfg, igStageItems(batch));
 }
 
 /* Build one card per chosen CSV row and run them. */
 async function igRunBulkSelected(cfg, check, rowIndices) {
   const data = igState.dataFile;
   const firstVar = check.vars[0];
-  igState.items = rowIndices.map(rowIdx => {
+  const batch = rowIndices.map(rowIdx => {
     const row = data.rows[rowIdx];
     const varValues = {};
     check.vars.forEach(v => { varValues[v] = row[v]; });
@@ -6043,14 +6115,18 @@ async function igRunBulkSelected(cfg, check, rowIndices) {
       variants: [], activeVariant: 0, total: cfg.variations
     };
   });
-  console.log(`[IG bulk] ${igState.items.length} row(s) x ${cfg.variations} variation(s) = ` +
-              `${igState.items.length * cfg.variations} request(s)`);
-  await igStartGeneration(cfg);
+  console.log(`[IG bulk] ${batch.length} row(s) x ${cfg.variations} variation(s) = ` +
+              `${batch.length * cfg.variations} request(s)`);
+  await igStartGeneration(cfg, igStageItems(batch));
 }
 
 /* Shared runner: renders the queue, works it with the concurrency pool,
-   and records which bulk rows succeeded. */
-async function igStartGeneration(cfg) {
+   and records which bulk rows succeeded.
+
+   `offset` is where this batch's cards start in igState.items — anything
+   before it is a previous run the user chose to keep, so it is left alone
+   and does not count towards this run's progress. */
+async function igStartGeneration(cfg, offset = 0) {
   igState.running = true;
   document.getElementById("igStartBtn").disabled = true;
   document.getElementById("igResetBtn").disabled = true;
@@ -6059,12 +6135,12 @@ async function igStartGeneration(cfg) {
   igUpdateDownloadAllBtn();
 
   let completed = 0;
-  const total = igState.items.length;
-  igSetGenerateState("running");
-  igSetProgress("running", 0, total);
+  const total = igState.items.length - offset;
+  igSetGenerateState("running", 0, total);
   igUpdateStatus(`Generating 0 / ${total}...`);
 
-  const queue = igState.items.map((_, i) => i);
+  const queue = [];
+  for (let i = offset; i < igState.items.length; i++) queue.push(i);
   const workers = [];
   for (let w = 0; w < CONCURRENCY; w++) {
     workers.push((async () => {
@@ -6072,7 +6148,7 @@ async function igStartGeneration(cfg) {
         const idx = queue.shift();
         await igGenerateOne(idx, cfg);
         completed++;
-        igSetProgress("running", completed, total);
+        igSetGenerateState("running", completed, total);
         igUpdateStatus(`Generating ${completed} / ${total}...`);
       }
     })());
@@ -6098,8 +6174,7 @@ async function igStartGeneration(cfg) {
     saveBulkGeneratedFor(key, merged);
     igRenderThumbs();
   }
-  const succeeded = igState.items.filter(i => i.status === "done").length;
-  igSetProgress("done", succeeded, total);
+  const succeeded = igState.items.slice(offset).filter(i => i.status === "done").length;
   igRefreshStartBtn();
   // Show the finished state only if something actually came back.
   igSetGenerateState(succeeded > 0 ? "done" : "idle");
@@ -6498,12 +6573,12 @@ async function igResetAll() {
   }
 
   igState.items = [];
+  igState.appendResults = false;
   igRenderGrid();
   igUpdateErrorBanner();
   igUpdateDownloadAllBtn();
   igUpdateStatus("");
   igSetGenerateState("idle");
-  igSetProgress("idle");
   igRefreshStartBtn();
 }
 
@@ -6524,6 +6599,7 @@ function igResetEverything() {
   igState.dataFile = null;
   igState.bulkGenerated = new Set();
   igState.bulkSelection = new Set();
+  igState.appendResults = false;
 
   document.getElementById("igPrompt").value = "";
   const d = IG_DEFAULT_CONFIG_VALUES;
@@ -6539,7 +6615,6 @@ function igResetEverything() {
   igUpdateDownloadAllBtn();
   igUpdateStatus("");
   igSetGenerateState("idle");
-  igSetProgress("idle");
   refreshSaveConfigStatus();
 }
 
@@ -6670,7 +6745,7 @@ document.querySelectorAll(".key-edit-btn").forEach(btn => {
 });
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && document.getElementById("confirmModal").classList.contains("visible")) {
-    settleConfirm(false);
+    settleConfirm("dismiss");
     return;
   }
   if (e.key === "Escape" && document.getElementById("bulkModal").classList.contains("visible")) {
@@ -6740,10 +6815,10 @@ document.getElementById("igAddDataBtn").addEventListener("click", () => {
 });
 
 /* ---------- confirm dialog ---------- */
-document.getElementById("confirmOkBtn").addEventListener("click", () => settleConfirm(true));
-document.getElementById("confirmCancelBtn").addEventListener("click", () => settleConfirm(false));
+document.getElementById("confirmOkBtn").addEventListener("click", () => settleConfirm("ok"));
+document.getElementById("confirmCancelBtn").addEventListener("click", () => settleConfirm("cancel"));
 document.getElementById("confirmModal").addEventListener("click", (e) => {
-  if (e.target.id === "confirmModal") settleConfirm(false);
+  if (e.target.id === "confirmModal") settleConfirm("dismiss");
 });
 
 /* ---------- bulk entry picker ---------- */
@@ -6772,7 +6847,6 @@ igPopulateQualityDropdown();
 igPopulateAspectDropdown();
 setHeaderIcon(currentPage);
 igSetGenerateState("idle");
-igSetProgress("idle");
 igRefreshModeUI();
 igRefreshStartBtn();
 igRenderGrid();
