@@ -861,6 +861,17 @@
   }
   #igPrompt:focus { outline: none; border-color: #2563eb; }
   #igPrompt::placeholder { color: #9ca3af; }
+  /* "Bulk Images CSV Only": the prompt lives in the file, so the box is frozen
+     and reads as inert rather than merely empty. */
+  #igPrompt.frozen {
+    background: #f3f4f6;
+    border-color: #9ca3af;
+    border-style: dashed;
+    color: #6b7280;
+    cursor: not-allowed;
+    resize: none;
+  }
+  #igPrompt.frozen:focus { border-color: #9ca3af; }
 
   /* image strips under the prompt */
   .ig-strip-row {
@@ -1100,8 +1111,8 @@
   #igStartBtn.state-running:disabled {
     background-image:
       linear-gradient(90deg, rgba(124, 45, 18, 0.22) 0%, rgba(124, 45, 18, 0.22) 100%),
-      linear-gradient(90deg, #f97316 0%, #fbbf24 55%, #fde047 100%);
-    background-color: #f97316;
+      linear-gradient(90deg, #fb923c 0%, #fbbf24 55%, #fde047 100%);
+    background-color: #fb923c;
     background-repeat: no-repeat, no-repeat;
     background-position: right center, left center;
     background-size: 100% 100%, 100% 100%;   /* shade full width = 0% progress */
@@ -1310,11 +1321,101 @@
   .bulk-table thead th.varcol { color: #1d4ed8; }
   .bulk-table tbody tr { background: #fff; cursor: pointer; }
   .bulk-table tbody tr.done { background: #dcfce7; }
-  .bulk-table tbody tr:hover { filter: brightness(0.97); }
+  /* Hover tints the cells rather than filtering the row: a `filter` on an
+     ancestor creates a containing block, which would break position:sticky on
+     the pinned Options cell and make it jump as the pointer moves. */
+  .bulk-table tbody tr:hover td { background: #f1f3f5; }
+  .bulk-table tbody tr.done:hover td { background: #cdf0d8; }
   .bulk-table tbody tr.selected { outline: 2px solid #7c3aed; outline-offset: -2px; }
   .bulk-table td.cb, .bulk-table th.cb { width: 34px; text-align: center; }
   .bulk-table input[type="checkbox"] { cursor: pointer; width: 15px; height: 15px; }
   .bulk-table td.badge-cell { width: 74px; }
+
+  /* ---------- Options column (CSV-only preview) ----------
+     Pinned to the right edge: the PROMPT column makes the table scroll
+     horizontally, and these actions must stay reachable without hunting. */
+  .bulk-table th.opt-cell, .bulk-table td.opt-cell {
+    width: 82px;
+    text-align: center;
+    overflow: visible;
+    position: sticky;
+    right: 0;
+    box-shadow: -7px 0 9px -7px rgba(15, 23, 42, 0.25);
+  }
+  .bulk-table td.opt-cell { background: #fff; }
+  .bulk-table tbody tr.done td.opt-cell { background: #dcfce7; }
+  .bulk-table thead th.opt-cell {
+    background: #eef2f7;
+    z-index: 2;              /* above both the sticky head row and body cells */
+  }
+  .bulk-opts {
+    display: inline-flex;
+    gap: 4px;
+    /* the row click toggles selection — these must not inherit that intent */
+    cursor: default;
+  }
+  .bulk-opt-btn {
+    width: 26px; height: 26px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    background: #fff;
+    color: #4b5563;
+    font-size: 13px;
+    line-height: 1;
+    cursor: pointer;
+  }
+  .bulk-opt-btn:hover { background: #eef2ff; border-color: #a5b4fc; color: #1d4ed8; }
+  .bulk-opt-btn.copied {
+    background: #dcfce7;
+    border-color: #86efac;
+    color: #166534;
+  }
+
+  /* ---------- rewritten-prompt view, inside the same modal ---------- */
+  .bulk-back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px 5px 9px;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: inherit;
+    border-radius: 5px;
+    border: 1px solid #d1d5db;
+    background: #fff;
+    color: #374151;
+    cursor: pointer;
+  }
+  .bulk-back-btn:hover { background: #f3f4f6; }
+  .bulk-prompt-view {
+    padding: 16px 20px 20px;
+    overflow: auto;
+    flex: 1;
+    min-height: 120px;
+  }
+  .bulk-prompt-meta {
+    font-size: 12px;
+    color: #6b7280;
+    margin-bottom: 10px;
+    line-height: 1.6;
+  }
+  .bulk-prompt-code {
+    margin: 0;
+    padding: 14px 16px;
+    background: #0f172a;
+    color: #e2e8f0;
+    border-radius: 10px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow-x: auto;
+  }
   .bulk-done-tag {
     display: inline-block;
     font-size: 10px;
@@ -1651,6 +1752,20 @@
                 <li>Outputs are named <code>&lt;#&gt;_gen_&lt;Model&gt;_&lt;first 10 chars of the first variable&gt;</code>, e.g. <code>14_gen_GPT_BabySeaTur</code>.</li>
               </ul>
             </span>
+
+            <span class="ig-info-mode" data-mode="csvonly">
+              <strong>Generation Mode: Bulk Images CSV Only — everything comes from the file</strong>
+              <ul>
+                <li>The <strong>Prompt</strong> box is frozen and the <strong>Reference image</strong> button is hidden: both move into the CSV, one prompt per row.</li>
+                <li>Header row: <code>#</code> first (the entry number), then any <code>VAR_</code> columns, then the optional <code>REFERENCE_IMAGE</code> column, then <code>PROMPT_REFERENCE</code> last — e.g. <code>#, VAR_EXAMPLE_1, VAR_EXAMPLE_2, REFERENCE_IMAGE, PROMPT_REFERENCE</code>. Only <code>#</code> and <code>PROMPT_REFERENCE</code> are required.</li>
+                <li><code>PROMPT_REFERENCE</code> does <strong>not</strong> hold the prompt text — it holds a reference to a <strong>.txt file</strong> that does. Normally a path on your Mac: <code>/Users/you/Desktop/prompts/lion.txt</code>, <code>~/Desktop/prompts/lion.txt</code>, <code>file:///Users/…</code> or just <code>lion.txt</code> all work, and an <code>http(s):</code> URL is fetched directly. Several rows may point at the same file and differ only by their <code>VAR_</code> values.</li>
+                <li><strong>A browser cannot open a desktop path on its own</strong> — that is a security rule, not a setting. Click <strong>Link local folder</strong> once and choose the folder holding your prompts and images (sub-folders included); every path in the CSV is then matched against it by its trailing path, longest match first. <strong>Link files</strong> picks individual files instead.</li>
+                <li>Each row's prompt <em>file</em> is validated <strong>against that row</strong>: every <code>VAR_</code> it mentions must have a column <em>and</em> a non-empty value in that same row. Offending rows are listed by number, as are rows whose .txt is missing, empty, or returns a web page instead of text.</li>
+                <li><code>REFERENCE_IMAGE</code> is optional and may be blank on any row. It takes the same forms as <code>PROMPT_REFERENCE</code> and is resolved from the same linked folder, so one grant covers both columns. Rows whose image cannot be found are reported by number.</li>
+                <li>Before a row is sent it is validated once more, then rebuilt as a <strong>well-formed JSON request</strong> carrying the brief, that row's exact values, the embedded style reference and the output format.</li>
+                <li>Previewing, <strong>Select all</strong> / <strong>Clear</strong>, per-row green "generated" tinting, <strong>Generate</strong> and naming all behave exactly as in <strong>New Bulk Images</strong>.</li>
+              </ul>
+            </span>
           </span>
         </span>
         <h2>Prompt</h2>
@@ -1660,19 +1775,26 @@
       <div class="ig-strip-row">
         <div class="ig-strip-side edit-side">
           <button type="button" id="igAddEditBtn" class="ig-add-btn blue" title="Add images to edit (Edit mode only, up to 20)"><span class="plus">+</span>Images to edit</button>
-          <button type="button" id="igAddDataBtn" class="ig-add-btn green hidden" title="Upload a CSV data file"><span class="plus">+</span>Upload data file</button>
+          <button type="button" id="igAddDataBtn" class="ig-add-btn green hidden" title="Upload a CSV file"><span class="plus">+</span>Upload CSV file</button>
           <div id="igEditThumbs" class="ig-thumbs"></div>
           <span id="igEditCount" class="ig-count-hint"></span>
         </div>
-        <div class="ig-strip-side">
+        <div class="ig-strip-side" id="igRefSide">
           <div id="igRefThumbs" class="ig-thumbs" style="flex:0 0 auto;"></div>
           <button type="button" id="igAddRefBtn" class="ig-add-btn orange" title="Add one reference image"><span class="plus">+</span>Reference image</button>
+          <!-- CSV-only mode: the REFERENCE_IMAGE column names files the browser
+               cannot read off disk on its own, so they are linked once here. -->
+          <button type="button" id="igLinkFolderBtn" class="ig-add-btn green hidden" title="Grant access to the folder holding the .txt prompts and reference images named in the CSV"><span class="plus">+</span>Link local folder</button>
+          <button type="button" id="igLinkFilesBtn" class="ig-add-btn orange hidden" title="Pick individual .txt and image files named in the CSV"><span class="plus">+</span>Link files</button>
         </div>
       </div>
 
       <input type="file" id="igEditFileInput" accept="image/*" multiple hidden />
       <input type="file" id="igRefFileInput" accept="image/*" hidden />
       <input type="file" id="igDataFileInput" accept=".csv,text/csv" hidden />
+      <!-- One folder grant covers both PROMPT_REFERENCE and REFERENCE_IMAGE. -->
+      <input type="file" id="igCsvFolderInput" webkitdirectory directory multiple hidden />
+      <input type="file" id="igCsvFilesInput" accept=".txt,.md,text/plain,text/markdown,image/*" multiple hidden />
 
       <div class="ig-fields">
         <div class="field">
@@ -1707,6 +1829,7 @@
             <option value="new" selected>New</option>
             <option value="edit">Edit</option>
             <option value="bulk">New Bulk Images</option>
+            <option value="csvonly">Bulk Images CSV Only</option>
           </select>
         </div>
       </div>
@@ -1771,8 +1894,17 @@
         <span><span class="sw done"></span>already generated this session</span>
       </span>
     </div>
+    <!-- Shown instead of the tools row while a rewritten prompt is on screen. -->
+    <div class="bulk-tools" id="bulkPromptTools" style="display:none;">
+      <button type="button" id="bulkBackBtn" class="bulk-back-btn"><span aria-hidden="true">←</span>Back to entries</button>
+      <button type="button" id="bulkPromptCopyBtn">Copy JSON</button>
+    </div>
     <div class="bulk-table-wrap">
       <table class="bulk-table" id="bulkTable"></table>
+    </div>
+    <div class="bulk-prompt-view" id="bulkPromptView" style="display:none;">
+      <div class="bulk-prompt-meta" id="bulkPromptMeta"></div>
+      <pre class="bulk-prompt-code" id="bulkPromptCode"></pre>
     </div>
     <div class="bulk-foot">
       <span class="bulk-count" id="bulkCount"></span>
@@ -3401,6 +3533,59 @@ function buildImageGenPrompt(opts) {
   return parts.join("\n");
 }
 
+/* CSV-only rows are sent as a well-formed JSON request instead of the prose
+   brief. Each row already carries its own complete prompt, so structuring it
+   keeps the row's exact values, its style reference and the authoritative
+   output format in separate, unambiguous fields rather than one flat blob. */
+function buildImageGenPromptJSON(opts) {
+  const { userPrompt, refImage, aspect, varValues, entry, promptFile } = opts;
+  const payload = {
+    role: "Professional illustrator and layout designer producing final, print-ready artwork.",
+    task: "Produce one new, original, finished image that satisfies creative_brief below.",
+    creative_brief: String(userPrompt || "").trim()
+  };
+  if (entry) payload.entry = String(entry);
+  // Provenance only — helps when auditing which .txt produced which image.
+  if (promptFile) payload.prompt_source = String(promptFile);
+
+  if (varValues && Object.keys(varValues).length) {
+    payload.exact_values = { ...varValues };
+    payload.exact_values_rule =
+      "Already applied in creative_brief. Reproduce character-for-character: correct spelling, " +
+      "no substitutions, no pluralisation changes.";
+  }
+
+  if (refImage) {
+    payload.style_reference = {
+      image: refImage.name,
+      attached: true,
+      use: "Visual style only — colour palette, rendering technique, line quality and overall look. " +
+           "Do not copy its subject matter."
+    };
+  }
+
+  if (aspect) {
+    payload.output_format = {
+      aspect_ratio: describeAspect(aspect),
+      authoritative: true,
+      note: ASPECT_MENTION_RE.test(String(userPrompt || ""))
+        ? `creative_brief also mentions a ratio, orientation or shape — ignore that part. ` +
+          `${aspect} is the only correct output shape.`
+        : "Overrides any ratio implied by creative_brief."
+    };
+  }
+
+  payload.quality_bar = [
+    "Deliver a finished, production-ready image, not a sketch, mockup or concept study.",
+    "Any text must be spelled exactly as specified, fully legible, and contained inside its element.",
+    "Compose within the frame: nothing important cropped, clipped or running off the edge.",
+    "No watermarks, signatures, borders, UI chrome, or captions that the brief did not ask for.",
+    "No placeholder or lorem-ipsum text, and no duplicated subjects unless the brief asks for them."
+  ];
+
+  return "Follow this JSON image request exactly.\n\n" + JSON.stringify(payload, null, 2);
+}
+
 /* ---------- Gemini (new + edit + reference) ---------- */
 async function igCallGemini(modelKey, prompt, selectedRatio, quality, images, onRateLimited) {
   const modelId = MODEL_MAP[modelKey];
@@ -3637,8 +3822,10 @@ async function igCallIdeogram(modelKey, prompt, selectedRatio, quality, images, 
 
 /* Dispatcher for the Image Generator page. */
 async function callImageGen(opts) {
-  const { modelKey, userPrompt, mode, quality, aspect, editImage, refImage, varValues, onRateLimited } = opts;
-  const prompt = buildImageGenPrompt({ userPrompt, mode, editImage, refImage, aspect, varValues });
+  const { modelKey, userPrompt, mode, quality, aspect, editImage, refImage, varValues, entry, promptFile, onRateLimited } = opts;
+  const prompt = mode === "csvonly"
+    ? buildImageGenPromptJSON({ userPrompt, refImage, aspect, varValues, entry, promptFile })
+    : buildImageGenPrompt({ userPrompt, mode, editImage, refImage, aspect, varValues });
   // Order matters: the image being edited always comes first.
   const images = [];
   if (mode === "edit" && editImage) images.push(editImage);
@@ -5264,6 +5451,408 @@ function validateBulkData(promptText, data) {
 }
 
 /* ===========================================================
+   "Bulk Images CSV Only" mode
+
+   Everything the run needs is in the file, one row per image:
+
+     #, VAR_EXAMPLE_1, VAR_EXAMPLE_2, REFERENCE_IMAGE, PROMPT
+
+   `#` and `PROMPT` are required; VAR_ columns and REFERENCE_IMAGE are not.
+   Unlike Bulk mode there is no single shared prompt to validate against, so
+   every row is checked on its own: the variables ITS prompt mentions must be
+   backed by a column that is filled in on THAT row.
+   =========================================================== */
+const CSVONLY_NUM_COL = "#";
+/* The prompt itself is no longer in the file: this column holds a reference to
+   a .txt file that contains it. */
+const CSVONLY_PROMPT_COL = "PROMPT_REFERENCE";
+const CSVONLY_LEGACY_PROMPT_COL = "PROMPT";   // older files, detected to give a precise error
+const CSVONLY_REF_COL = "REFERENCE_IMAGE";
+
+function isBulkMode(mode) { return mode === "bulk" || mode === "csvonly"; }
+
+/* Header lookup that tolerates stray spacing and casing, so a file saved from
+   a spreadsheet as " Prompt " still lines up. */
+function csvFindHeader(headers, wanted) {
+  const want = String(wanted).trim().toLowerCase();
+  return (headers || []).find(h => String(h).trim().toLowerCase() === want) || null;
+}
+
+function csvCell(row, header) {
+  return header ? String(row[header] == null ? "" : row[header]).trim() : "";
+}
+
+/* A cell is either something the browser can fetch as-is, or a path on disk.
+
+   `file://` is deliberately NOT a fetchable URL: Chrome blocks fetching it even
+   from a file:// page, so those go down the local-path route like any other
+   desktop path. */
+function csvRefIsUrl(value) {
+  return /^(https?:|data:)/i.test(String(value || "").trim());
+}
+
+/* Normalise a desktop path so the many ways of writing the same location all
+   compare equal:  /Users/me/Desktop/p/a.txt  ·  file:///Users/me/Desktop/p/a.txt
+   ·  ~/Desktop/p/a.txt  ·  Desktop/p/a.txt  ·  backslashes  ·  %20 escapes. */
+function csvNormalizePath(value) {
+  let v = String(value || "").trim().replace(/^["']|["']$/g, "");
+  if (!v) return "";
+  if (/^file:\/\//i.test(v)) v = v.replace(/^file:\/\/(localhost)?/i, "");
+  if (/%[0-9A-Fa-f]{2}/.test(v)) { try { v = decodeURIComponent(v); } catch (_) {} }
+  return v.replace(/\\/g, "/").replace(/^~(?=\/)/, "").replace(/\/+/g, "/");
+}
+
+function csvRefBasename(value) {
+  return csvNormalizePath(value).replace(/\/+$/, "").split("/").pop().toLowerCase();
+}
+
+/* Every path suffix of a reference, longest first:
+     /Users/me/Desktop/p/a.txt  ->  ["users/me/desktop/p/a.txt", …, "p/a.txt", "a.txt"]
+   Linked files are indexed under the same suffixes, so the longest shared tail
+   wins and two files with the same name in different folders stay distinct. */
+function csvPathKeys(value) {
+  const norm = csvNormalizePath(value).toLowerCase().replace(/^\/+/, "").replace(/\/+$/, "");
+  const parts = norm.split("/").filter(Boolean);
+  const keys = [];
+  for (let i = 0; i < parts.length; i++) keys.push(parts.slice(i).join("/"));
+  return keys;
+}
+
+/* Index one picked file under every suffix of the path the browser gave us
+   (webkitRelativePath for a folder grant, otherwise just the file name). */
+function csvRegisterLocalFile(pool, file, record) {
+  const path = file.webkitRelativePath || file.name;
+  for (const key of csvPathKeys(path)) {
+    // First writer wins per key, so a deeper, more specific match is not
+    // clobbered by a same-named file picked later.
+    if (!pool.has(key)) pool.set(key, record);
+  }
+}
+
+/* Longest-suffix lookup. */
+function csvLookupInPool(pool, value) {
+  for (const key of csvPathKeys(value)) {
+    if (pool.has(key)) return pool.get(key);
+  }
+  return null;
+}
+
+/* Distinct files in a pool (a pool holds several keys per file). */
+function csvPoolSize(pool) {
+  return new Set(pool.values()).size;
+}
+
+/* Resolve one cell against the attached pool. Returns the image record, or
+   null when it is not available yet. URLs are resolved later, at send time. */
+function csvLookupRefImage(value) {
+  const v = String(value || "").trim();
+  if (!v) return null;
+  if (csvRefIsUrl(v)) return igState.csvImageUrlCache.get(v) || null;
+  return csvLookupInPool(igState.csvImagePool, v);
+}
+
+/* Same idea for PROMPT_REFERENCE, which points at a .txt file holding the
+   prompt. Text is resolved up front (see csvPreloadPromptTexts) so validation
+   can stay synchronous; this only reads what is already cached. */
+function csvLookupPromptText(value) {
+  const v = String(value || "").trim();
+  if (!v) return null;
+  if (csvRefIsUrl(v)) {
+    return igState.csvPromptUrlCache.has(v) ? igState.csvPromptUrlCache.get(v) : null;
+  }
+  const hit = csvLookupInPool(igState.csvPromptPool, v);
+  return hit ? hit.text : null;
+}
+
+/* Fetch one prompt file. Kept deliberately strict: a mistyped URL that lands
+   on a web page would otherwise be sent to the model as the "prompt". */
+async function fetchPromptTextFile(url) {
+  let resp;
+  try {
+    resp = await fetch(url, { cache: "no-store" });
+  } catch (e) {
+    throw new Error(`could not be fetched (${e.message || e})`);
+  }
+  if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+  const ct = String(resp.headers.get("content-type") || "").toLowerCase();
+  const text = await resp.text();
+  if (!text.trim()) throw new Error("the file is empty");
+  if (/text\/html/.test(ct) || /^\s*<(!doctype|html)\b/i.test(text)) {
+    throw new Error("that URL returns a web page, not a plain text file");
+  }
+  return text;
+}
+
+/* Resolve every http(s)/data: PROMPT_REFERENCE in the file once, so the rest
+   of the pipeline (validation, naming, preview) can read them synchronously.
+   Local paths are supplied by the user via "Link local folder". */
+async function csvPreloadPromptTexts(data) {
+  const col = data ? csvFindHeader(data.headers, CSVONLY_PROMPT_COL) : null;
+  const failed = [];
+  let fetched = 0;
+  if (!col) return { fetched, failed };
+
+  const seen = new Set();
+  for (const row of data.rows) {
+    const cell = csvCell(row, col);
+    if (!cell || !csvRefIsUrl(cell)) continue;
+    if (seen.has(cell) || igState.csvPromptUrlCache.has(cell)) continue;
+    seen.add(cell);
+    try {
+      igState.csvPromptUrlCache.set(cell, await fetchPromptTextFile(cell));
+      fetched++;
+    } catch (e) {
+      failed.push({ value: cell, error: e.message || String(e) });
+    }
+  }
+  return { fetched, failed };
+}
+
+/* Validate a CSV-only file. Reports every offending row rather than the first,
+   because fixing a spreadsheet one error per attempt is miserable. */
+function validateCsvOnlyData(data) {
+  if (!data || !data.rows) return { ok: false, error: "No CSV file loaded." };
+
+  const headers = data.headers.map(h => String(h).trim());
+  const numCol = csvFindHeader(headers, CSVONLY_NUM_COL);
+  const promptCol = csvFindHeader(headers, CSVONLY_PROMPT_COL);
+  const refCol = csvFindHeader(headers, CSVONLY_REF_COL);
+
+  if (!promptCol) {
+    // A file written for the older schema is the likeliest cause, so say so
+    // instead of just listing headers.
+    if (csvFindHeader(headers, CSVONLY_LEGACY_PROMPT_COL)) {
+      return { ok: false, error:
+        `"${data.name}" still uses the old "${CSVONLY_LEGACY_PROMPT_COL}" column, which held the prompt text itself. ` +
+        `Rename it to "${CSVONLY_PROMPT_COL}" and put a reference to a .txt file in each cell ` +
+        `(a desktop path whose folder you grant with "Link local folder", or an http(s):// URL) instead of the prompt text.` };
+    }
+    return { ok: false, error:
+      `"${data.name}" has no ${CSVONLY_PROMPT_COL} column. In this mode each row points at a .txt file ` +
+      `holding its prompt — add a ${CSVONLY_PROMPT_COL} column. Headers found: ${headers.filter(Boolean).join(", ")}.` };
+  }
+  if (!numCol) {
+    return { ok: false, error:
+      `"${data.name}" has no "${CSVONLY_NUM_COL}" column. The first column must be "${CSVONLY_NUM_COL}" ` +
+      `and carry the entry number. Headers found: ${headers.filter(Boolean).join(", ")}.` };
+  }
+  if (data.rows.length === 0) {
+    return { ok: false, error: `"${data.name}" has a header row but no data rows.` };
+  }
+
+  const varCols = csvVariableHeaders(headers);
+  const varColSet = new Set(varCols);
+
+  const emptyPromptRows = [];
+  const unresolvedPromptRows = [];  // { row, value }  — .txt not fetched/linked yet
+  const emptyTextRows = [];         // { row, value }  — resolved but blank
+  const missingVarRows = [];    // { row, vars }  — no such column at all
+  const blankVarRows = [];      // { row, vars }  — column exists, cell empty
+  const nearMissRows = [];      // { row, tokens }
+  const missingRefRows = [];    // { row, value }
+  const usedVars = new Set();
+  let refCount = 0;
+
+  data.rows.forEach((row, i) => {
+    const label = csvCell(row, numCol) || String(i + 1);
+    const ref = csvCell(row, promptCol);
+
+    if (!ref) { emptyPromptRows.push(label); return; }
+
+    // The prompt now comes from the referenced file, not from the cell.
+    const text = csvLookupPromptText(ref);
+    if (text == null) { unresolvedPromptRows.push({ row: label, value: ref }); return; }
+    if (!String(text).trim()) { emptyTextRows.push({ row: label, value: ref }); return; }
+
+    const rowVars = extractPromptVariables(text);
+    const noColumn = [], blank = [];
+    for (const v of rowVars) {
+      if (!varColSet.has(v)) {
+        // A stem like VAR_QUESTION standing in for VAR_QUESTION-1..-4 is prose.
+        const isStem = varCols.some(h => new RegExp(`^${v.replace(/[.*+?^${}()|[\]\\-]/g, "\\$&")}[-_]\\d+$`).test(h));
+        if (!isStem) noColumn.push(v);
+        continue;
+      }
+      usedVars.add(v);
+      if (!csvCell(row, v)) blank.push(v);
+    }
+    if (noColumn.length) missingVarRows.push({ row: label, vars: noColumn });
+    if (blank.length) blankVarRows.push({ row: label, vars: blank });
+
+    const near = findNearMissPlaceholders(text).filter(t => /^var_/i.test(t) && t !== t.toUpperCase());
+    if (near.length) nearMissRows.push({ row: label, tokens: near });
+
+    if (refCol) {
+      const ref = csvCell(row, refCol);
+      if (ref) {
+        refCount++;
+        if (!csvRefIsUrl(ref) && !csvLookupRefImage(ref)) missingRefRows.push({ row: label, value: ref });
+      }
+    }
+  });
+
+  const rowList = (arr, fmt) =>
+    arr.slice(0, 8).map(fmt).join("; ") + (arr.length > 8 ? `; …and ${arr.length - 8} more` : "");
+
+  if (emptyPromptRows.length) {
+    return { ok: false, error:
+      `${CSVONLY_PROMPT_COL} is empty on row${emptyPromptRows.length > 1 ? "s" : ""} ` +
+      `${emptyPromptRows.slice(0, 12).join(", ")}${emptyPromptRows.length > 12 ? ", …" : ""}. ` +
+      `Every row must reference a .txt file holding its prompt.` };
+  }
+  if (unresolvedPromptRows.length) {
+    const locals = unresolvedPromptRows.filter(r => !csvRefIsUrl(r.value));
+    return { ok: false, error:
+      `The prompt file could not be read for row${unresolvedPromptRows.length > 1 ? "s" : ""} — ` +
+      `${rowList(unresolvedPromptRows, r => `#${r.row}: "${r.value}"`)}. ` +
+      (locals.length
+        ? `A browser cannot open a path on your disk by itself: click "Link local folder" and choose the folder that holds them ` +
+          `(sub-folders included), or use "Link files" to pick them individually. On macOS a path like /Users/you/Desktop/... cannot be opened by the browser without that grant.`
+        : `Check the URL is reachable and returns a plain text file.`),
+      needsPrompts: unresolvedPromptRows.map(r => r.value) };
+  }
+  if (emptyTextRows.length) {
+    return { ok: false, error:
+      `The referenced prompt file is empty for row${emptyTextRows.length > 1 ? "s" : ""} — ` +
+      `${rowList(emptyTextRows, r => `#${r.row}: "${r.value}"`)}.` };
+  }
+  if (missingVarRows.length) {
+    const all = [...new Set(missingVarRows.flatMap(r => r.vars))];
+    return { ok: false, error:
+      `Variable${all.length > 1 ? "s" : ""} used in a row's prompt file but with no matching column: ${all.join(", ")}. ` +
+      `Affected row${missingVarRows.length > 1 ? "s" : ""} — ${rowList(missingVarRows, r => `#${r.row}: ${r.vars.join(", ")}`)}. ` +
+      (varCols.length ? `The file provides: ${varCols.join(", ")}.` : `The file has no ${IG_VAR_PREFIX} columns at all.`) };
+  }
+  if (blankVarRows.length) {
+    return { ok: false, error:
+      `A row's prompt file uses a variable that is empty on that same row — ` +
+      `${rowList(blankVarRows, r => `#${r.row}: ${r.vars.join(", ")}`)}. Fill those cells or remove the variable from that prompt file.` };
+  }
+  if (missingRefRows.length) {
+    return { ok: false, error:
+      `${CSVONLY_REF_COL} could not be found for row${missingRefRows.length > 1 ? "s" : ""} — ` +
+      `${rowList(missingRefRows, r => `#${r.row}: "${r.value}"`)}. ` +
+      `A browser cannot open a path on your disk by itself: click "Link local folder" and choose the folder that holds them ` +
+      `(sub-folders included), or use "Link files" to pick them individually.`,
+      needsImages: missingRefRows.map(r => r.value) };
+  }
+
+  const warnings = [];
+  if (nearMissRows.length) {
+    warnings.push(
+      `Not UPPERCASE, so treated as ordinary text — ` +
+      rowList(nearMissRows, r => `#${r.row}: ${r.tokens.join(", ")}`) + ".");
+  }
+  const unusedVarCols = varCols.filter(h => !usedVars.has(h));
+  if (unusedVarCols.length) {
+    warnings.push(`${unusedVarCols.join(", ")} ${unusedVarCols.length > 1 ? "are" : "is"} never used by any row's prompt file.`);
+  }
+  if (refCol && refCount === 0) {
+    warnings.push(`${CSVONLY_REF_COL} is present but blank on every row — no style reference will be attached.`);
+  }
+  // Several rows pointing at the same .txt is legitimate (same layout, different
+  // values) but is also what a copy-paste slip looks like, so it is surfaced.
+  const refs = data.rows.map(r => csvCell(r, promptCol)).filter(Boolean);
+  const distinct = new Set(refs.map(r => (csvRefIsUrl(r) ? r : csvRefBasename(r))));
+  if (refs.length > 1 && distinct.size < refs.length) {
+    warnings.push(
+      `${refs.length} rows reference only ${distinct.size} distinct prompt file${distinct.size === 1 ? "" : "s"} — ` +
+      `rows sharing a file differ only by their ${IG_VAR_PREFIX} values.`);
+  }
+
+  return {
+    ok: true,
+    csvOnly: true,
+    vars: varCols.filter(h => usedVars.has(h)),
+    numCol, promptCol, refCol,
+    rowCount: data.rows.length,
+    refCount,
+    promptFileCount: distinct.size,
+    warnings
+  };
+}
+
+/* One entry point so every caller validates against the active mode. */
+function validateBulkFor(mode, promptText, data) {
+  return mode === "csvonly"
+    ? validateCsvOnlyData(data)
+    : validateBulkData(promptText, data);
+}
+
+/* The raw text of this row's referenced prompt file, before substitution. */
+function csvOnlyRowSourceText(row, check) {
+  return csvLookupPromptText(csvCell(row, check.promptCol)) || "";
+}
+
+/* This row's prompt — read from its .txt file, with its own values substituted. */
+function csvOnlyRowPrompt(row, data, check) {
+  return applyRowToPrompt(csvOnlyRowSourceText(row, check), row, data.headers);
+}
+
+/* The exact text that would be sent for one row — the rewritten JSON request.
+
+   Built from the same inputs igGenerateOne uses, so what the eye icon shows is
+   what goes on the wire. The style reference is represented by its name only
+   (the bytes travel as a separate attachment), which means the preview needs
+   no network call for an as-yet-unfetched URL. */
+function csvOnlyRowRequestText(row, data, check, rowIndex, cfg) {
+  const refCell = check.refCol ? csvCell(row, check.refCol) : "";
+  const resolved = refCell ? csvLookupRefImage(refCell) : null;
+  const refImage = refCell
+    ? (resolved || { name: refCell.split(/[\\/]/).pop() })
+    : null;
+
+  const varValues = {};
+  extractPromptVariables(csvOnlyRowSourceText(row, check))
+    .filter(v => check.vars.includes(v))
+    .forEach(v => { varValues[v] = row[v]; });
+
+  return buildImageGenPromptJSON({
+    userPrompt: csvOnlyRowPrompt(row, data, check),
+    refImage,
+    aspect: cfg.aspect,
+    varValues,
+    entry: csvCell(row, check.numCol) || String(rowIndex + 1),
+    promptFile: csvCell(row, check.promptCol)
+  });
+}
+
+/* Fetch-and-embed for http(s)/data: references, cached so a URL reused across
+   rows is only pulled once. Local names come from the attached pool. */
+async function csvResolveRefImage(value) {
+  const v = String(value || "").trim();
+  if (!v) return null;
+  if (!csvRefIsUrl(v)) {
+    const hit = igState.csvImagePool.get(csvRefBasename(v));
+    if (hit) return hit;
+    throw new Error(`Reference image "${v}" is not linked. Use "Link local folder" to grant access to its folder.`);
+  }
+  if (igState.csvImageUrlCache.has(v)) return igState.csvImageUrlCache.get(v);
+
+  let resp;
+  try {
+    resp = await fetch(v, { cache: "force-cache" });
+  } catch (e) {
+    throw new Error(`Could not fetch reference image ${v}: ${e.message || e}`);
+  }
+  if (!resp.ok) throw new Error(`Could not fetch reference image ${v}: HTTP ${resp.status}`);
+  const blob = await resp.blob();
+  if (!/^image\//i.test(blob.type || "")) {
+    throw new Error(`Reference image ${v} is not an image (got ${blob.type || "unknown type"}).`);
+  }
+  const dataUrl = await new Promise((resolve, reject) => {
+    const fr = new FileReader();
+    fr.onerror = () => reject(new Error("Could not read " + v));
+    fr.onload = () => resolve(fr.result);
+    fr.readAsDataURL(blob);
+  });
+  const { mime, base64 } = splitDataUrl(dataUrl);
+  const img = { name: v.split("/").pop() || "reference", mime: mime || blob.type, base64, dataUrl };
+  igState.csvImageUrlCache.set(v, img);
+  return img;
+}
+
+/* ===========================================================
    Bulk progress, shared across tabs
 
    Which entries have already been generated is keyed by the DATA itself —
@@ -5359,6 +5948,23 @@ function bulkCardName(row, headers, rowIndex, modelKey, firstVar, quality) {
   return q ? `${base}_${q}` : base;
 }
 
+/* Same shape as bulkCardName, but a CSV-only row may have no VAR_ columns at
+   all — then the slug comes from the row's own prompt text. */
+function csvOnlyCardName(row, data, check, rowIndex, cfg) {
+  const entry = csvCell(row, check.numCol) || String(rowIndex + 1);
+  const slug = igModelSlug(cfg.model);
+  const firstVar = check.vars[0];
+  // With no VAR_ columns the slug falls back to the prompt's own text, and
+  // failing that to the referenced file name.
+  const source = (firstVar && csvCell(row, firstVar))
+    || csvOnlyRowSourceText(row, check)
+    || csvRefBasename(csvCell(row, check.promptCol)).replace(/\.[^.]+$/, "");
+  const short = String(source).replace(/[^A-Za-z0-9]/g, "").slice(0, 10);
+  const q = igQualityLabel(cfg.quality, cfg.model);
+  const base = short ? `${entry}_gen_${slug}_${short}` : `${entry}_gen_${slug}`;
+  return q ? `${base}_${q}` : base;
+}
+
 const igState = {
   items: [],        // { name, status, variants:[{dataUrl,base64,mime,cost}], activeVariant, ... }
   running: false,
@@ -5367,7 +5973,15 @@ const igState = {
   dataFile: null,   // bulk mode: { name, headers:[], rows:[{col:value}] }
   bulkGenerated: new Set(),  // row indices already generated OK this session
   bulkSelection: new Set(),  // row indices ticked in the picker
-  appendResults: false       // this run adds to the shown results instead of replacing them
+  appendResults: false,      // this run adds to the shown results instead of replacing them
+  // CSV-only mode: images named by the REFERENCE_IMAGE column, keyed by
+  // lowercased file name, plus a cache of already-fetched http(s)/data: URLs.
+  csvImagePool: new Map(),
+  csvImageUrlCache: new Map(),
+  // PROMPT_REFERENCE: .txt files linked from disk, keyed by lowercased file
+  // name, plus the text of every http(s)/data: URL already fetched.
+  csvPromptPool: new Map(),
+  csvPromptUrlCache: new Map()
 };
 
 function igReadConfig() {
@@ -5444,23 +6058,60 @@ function igSetGenerateState(state, done, total) {
   }
 }
 
+/* Request-level progress for the Generate button's gradient. Counted per
+   variation rather than per card so a small batch still animates. */
+const igProgress = { done: 0, total: 0 };
+
+function igTickProgress(n) {
+  if (!igProgress.total) return;          // not inside a batch (e.g. a regenerate)
+  igProgress.done = Math.min(igProgress.done + n, igProgress.total);
+  igSetGenerateState("running", igProgress.done, igProgress.total);
+}
+
+/* Last-moment check on a CSV-only row, run again just before it is sent in
+   case the file or the linked images changed after validation. Returns an
+   error string, or null when the row is good. */
+function csvOnlyRowProblem(item) {
+  if (!item.promptRef) return `Row #${item.entryLabel}: ${CSVONLY_PROMPT_COL} is empty.`;
+  // The linked file may have been removed since the batch was staged.
+  if (csvLookupPromptText(item.promptRef) == null) {
+    return `Row #${item.entryLabel}: the prompt file "${item.promptRef}" is no longer available. ` +
+           `Re-link it with "Link local folder", or check the URL.`;
+  }
+  const text = String(item.prompt || "").trim();
+  if (!text) return `Row #${item.entryLabel}: the prompt file "${item.promptRef}" is empty.`;
+  // Any VAR_ left in the substituted text had no value on this row.
+  const leftover = extractPromptVariables(text);
+  if (leftover.length) {
+    return `Row #${item.entryLabel}: ${leftover.join(", ")} ` +
+           `${leftover.length > 1 ? "have" : "has"} no value on this row, so ${leftover.length > 1 ? "they were" : "it was"} left unsubstituted.`;
+  }
+  if (item.refCell && !csvRefIsUrl(item.refCell) && !csvLookupRefImage(item.refCell)) {
+    return `Row #${item.entryLabel}: reference image "${item.refCell}" is not linked. ` +
+           `Use "Link local folder" to grant access to its folder.`;
+  }
+  return null;
+}
+
 function igRefreshStartBtn() {
   const btn = document.getElementById("igStartBtn");
   if (igState.running) { btn.disabled = true; return; }
+  const mode = document.getElementById("igMode").value;
   const hasPrompt = document.getElementById("igPrompt").value.trim().length > 0;
-  if (!hasPrompt) {
+  // CSV-only takes its prompts from the file, so the frozen box may be empty.
+  if (!hasPrompt && mode !== "csvonly") {
     btn.disabled = true;
     btn.title = "Type a prompt first";
     return;
   }
-  // Bulk mode additionally needs a CSV that actually satisfies the prompt.
-  if (document.getElementById("igMode").value === "bulk") {
+  // Both bulk modes additionally need a CSV that actually validates.
+  if (isBulkMode(mode)) {
     if (!igState.dataFile) {
       btn.disabled = true;
-      btn.title = 'Upload a CSV data file to generate in bulk';
+      btn.title = "Upload a CSV file to generate in bulk";
       return;
     }
-    const check = validateBulkData(document.getElementById("igPrompt").value, igState.dataFile);
+    const check = validateBulkFor(mode, document.getElementById("igPrompt").value, igState.dataFile);
     if (!check.ok) {
       btn.disabled = true;
       btn.title = check.error;
@@ -5476,14 +6127,19 @@ function igRefreshStartBtn() {
 }
 
 /* Blue "Images to edit" shows for New/Edit (enabled only in Edit);
-   in Bulk mode it is replaced by the green "Upload data file" button,
-   which in turn is enabled only once a prompt has been typed. */
+   in either bulk mode it is replaced by the green "Upload CSV file" button.
+
+   "Bulk Images CSV Only" goes further: the prompt and the reference image
+   both live in the file, so the prompt box is frozen and the orange
+   "Reference image" button is swapped for the local-file link buttons. */
 function igRefreshModeUI() {
   const mode = document.getElementById("igMode").value;
   const editBtn = document.getElementById("igAddEditBtn");
   const dataBtn = document.getElementById("igAddDataBtn");
+  const promptEl = document.getElementById("igPrompt");
   const isEdit = mode === "edit";
-  const isBulk = mode === "bulk";
+  const isBulk = isBulkMode(mode);
+  const isCsvOnly = mode === "csvonly";
 
   editBtn.classList.toggle("hidden", isBulk);
   dataBtn.classList.toggle("hidden", !isBulk);
@@ -5493,11 +6149,50 @@ function igRefreshModeUI() {
     ? `Add images to edit (up to ${IG_MAX_EDIT_IMAGES})`
     : 'Switch Generation Mode to "Edit" to attach images';
 
-  const hasPrompt = document.getElementById("igPrompt").value.trim().length > 0;
-  dataBtn.disabled = !hasPrompt;
-  dataBtn.title = hasPrompt
-    ? "Upload a CSV data file (one row = one image)"
-    : "Type a prompt first, then upload the CSV that fills its variables";
+  // Frozen prompt: the file supplies one per row.
+  promptEl.readOnly = isCsvOnly;
+  promptEl.classList.toggle("frozen", isCsvOnly);
+  promptEl.placeholder = isCsvOnly
+    ? `Frozen — in "Bulk Images CSV Only" each row's ${CSVONLY_PROMPT_COL} column points at a .txt file ` +
+      `holding that row's prompt.`
+    : "Like: cute lion, angry dog, small table";
+  promptEl.title = isCsvOnly
+    ? `The prompt lives in a .txt file referenced by the CSV's ${CSVONLY_PROMPT_COL} column`
+    : "";
+
+  // Reference image moves into the file's REFERENCE_IMAGE column.
+  document.getElementById("igAddRefBtn").classList.toggle("hidden", isCsvOnly);
+
+  /* Both PROMPT_REFERENCE and REFERENCE_IMAGE name files on disk, and a browser
+     cannot open a path by itself — so one folder grant serves both columns. The
+     two buttons appear as soon as a CSV declaring either column is loaded. */
+  const headers = isCsvOnly && igState.dataFile ? igState.dataFile.headers : null;
+  const needsLocalFiles = !!headers && (
+    !!csvFindHeader(headers, CSVONLY_PROMPT_COL) || !!csvFindHeader(headers, CSVONLY_REF_COL));
+  const folderBtn = document.getElementById("igLinkFolderBtn");
+  const filesBtn = document.getElementById("igLinkFilesBtn");
+  folderBtn.classList.toggle("hidden", !needsLocalFiles);
+  filesBtn.classList.toggle("hidden", !needsLocalFiles);
+  if (needsLocalFiles) {
+    const t = csvPoolSize(igState.csvPromptPool);
+    const i = csvPoolSize(igState.csvImagePool);
+    const linked = (t || i)
+      ? `${t} prompt file${t === 1 ? "" : "s"} and ${i} image${i === 1 ? "" : "s"} linked. `
+      : "";
+    folderBtn.title = linked +
+      `Pick the folder holding the files named in ${CSVONLY_PROMPT_COL} / ${CSVONLY_REF_COL} ` +
+      `(sub-folders included). Your browser cannot read a desktop path on its own — this grants it access.`;
+    filesBtn.title = linked + "Pick individual .txt and image files instead of a whole folder.";
+  }
+
+  const hasPrompt = promptEl.value.trim().length > 0;
+  // CSV-only needs no typed prompt, so its upload button is always live.
+  dataBtn.disabled = !isCsvOnly && !hasPrompt;
+  dataBtn.title = isCsvOnly
+    ? `Upload a CSV file with columns ${CSVONLY_NUM_COL}, ${IG_VAR_PREFIX}…, ${CSVONLY_REF_COL} (optional), ${CSVONLY_PROMPT_COL} (a .txt reference)`
+    : (hasPrompt
+        ? "Upload a CSV file (one row = one image)"
+        : "Type a prompt first, then upload the CSV that fills its variables");
 
   igRefreshInfoBubble();
   // The prompt is part of the dataset identity, so editing it selects a
@@ -5522,7 +6217,8 @@ function igRenderThumbs() {
   const editWrap = document.getElementById("igEditThumbs");
   const refWrap = document.getElementById("igRefThumbs");
   const countEl = document.getElementById("igEditCount");
-  const isBulk = document.getElementById("igMode").value === "bulk";
+  const mode = document.getElementById("igMode").value;
+  const isBulk = isBulkMode(mode);
 
   editWrap.innerHTML = "";
   if (isBulk) {
@@ -5549,7 +6245,25 @@ function igRenderThumbs() {
   }
 
   refWrap.innerHTML = "";
-  if (igState.refImage) {
+  if (mode === "csvonly") {
+    // Prompt texts and reference images belong to the file, so the strip
+    // reports how many are linked rather than showing a thumbnail.
+    const parts = [];
+    const nP = csvPoolSize(igState.csvPromptPool);
+    const nI = csvPoolSize(igState.csvImagePool);
+    if (nP) parts.push(`${nP} prompt`);
+    if (nI) parts.push(`${nI} image`);
+    if (parts.length) {
+      const chip = document.createElement("span");
+      chip.className = "ig-count-hint";
+      chip.textContent = parts.join(" · ") + " linked";
+      chip.title = [
+        ...[...igState.csvPromptPool.values()].map(p => p.name),
+        ...[...igState.csvImagePool.values()].map(i => i.name)
+      ].join("\n");
+      refWrap.appendChild(chip);
+    }
+  } else if (igState.refImage) {
     refWrap.appendChild(igMakeThumb(igState.refImage, () => {
       igState.refImage = null;
       igRenderThumbs();
@@ -5609,12 +6323,16 @@ function igMakeDataThumb(data, onRemove) {
   const subEl = document.createElement("span");
   subEl.className = "csv-sub";
 
-  const check = validateBulkData(document.getElementById("igPrompt").value, data);
+  const mode = document.getElementById("igMode").value;
+  const check = validateBulkFor(mode, document.getElementById("igPrompt").value, data);
   if (check.ok) {
     const doneCount = igState.bulkGenerated.size;
     subEl.textContent =
       `${data.rows.length} row${data.rows.length === 1 ? "" : "s"} · ` +
-      `${check.vars.length} var${check.vars.length === 1 ? "" : "s"} matched` +
+      (check.csvOnly
+        ? `${check.promptFileCount} prompt file${check.promptFileCount === 1 ? "" : "s"}` +
+          (check.refCount ? ` · ${check.refCount} ref` : "")
+        : `${check.vars.length} var${check.vars.length === 1 ? "" : "s"} matched`) +
       (doneCount ? ` · ${doneCount} done` : "");
     inner.title = (check.warnings && check.warnings.length)
       ? "Note: " + check.warnings.join("  ") + "\n\nClick to view the data file and its current state"
@@ -5672,11 +6390,94 @@ async function igHandleDataFile(fileList) {
   // Pick up any progress already recorded for this prompt + data combination,
   // including work done in another tab.
   refreshBulkGeneratedFromStorage();
+
+  const mode = document.getElementById("igMode").value;
+  /* CSV-only: the prompts live in files this CSV points at. Every http(s)/data:
+     reference is fetched once, up front, so validation and the row preview can
+     stay synchronous from here on. */
+  let fetchFailures = [];
+  if (mode === "csvonly") {
+    igUpdateStatus("Reading prompt files...");
+    try {
+      const pre = await csvPreloadPromptTexts(igState.dataFile);
+      fetchFailures = pre.failed;
+    } finally {
+      igUpdateStatus("");
+    }
+  }
   igRefreshModeUI();
 
   // Surface a mismatch immediately rather than at Generate time.
-  const check = validateBulkData(document.getElementById("igPrompt").value, igState.dataFile);
-  if (!check.ok) alert("Data file loaded, but it does not match the prompt yet:\n\n" + check.error);
+  const check = validateBulkFor(mode, document.getElementById("igPrompt").value, igState.dataFile);
+  if (!check.ok) {
+    const fetchNote = fetchFailures.length
+      ? "\n\nCould not fetch:\n" + fetchFailures.map(f2 => `• ${f2.value} — ${f2.error}`).join("\n")
+      : "";
+    alert((mode === "csvonly" ? "CSV loaded, but it cannot be used yet:" : "Data file loaded, but it does not match the prompt yet:") +
+          "\n\n" + check.error + fetchNote);
+    /* Open the folder picker straight away when local files are what is
+       missing — but only while the click that started all this is still a
+       valid user gesture. It usually is not (we have awaited a file read and
+       shown an alert), and Chrome silently ignores the call in that case, so
+       this is a convenience on top of the message, never the only route. */
+    const needsLocal =
+      (check.needsPrompts && check.needsPrompts.some(v => !csvRefIsUrl(v))) ||
+      (check.needsImages && check.needsImages.some(v => !csvRefIsUrl(v)));
+    if (needsLocal && navigator.userActivation && navigator.userActivation.isActive) {
+      document.getElementById("igCsvFolderInput").click();
+    }
+  }
+}
+
+/* Ingest whatever the user picked — a whole folder or individual files — and
+   route each entry by type: text into the prompt pool, images into the image
+   pool. One folder grant therefore satisfies both PROMPT_REFERENCE and
+   REFERENCE_IMAGE at once, which is the point: a browser cannot open
+   /Users/you/Desktop/... on its own, so the folder has to be handed to it. */
+async function igHandleLocalFiles(fileList) {
+  const files = Array.from(fileList || []);
+  if (files.length === 0) return;
+
+  const isText = f => /\.(txt|md|markdown|text)$/i.test(f.name) || /^text\//i.test(f.type || "");
+  const isImage = f => /\.(png|jpe?g|webp|gif|bmp|avif)$/i.test(f.name) || /^image\//i.test(f.type || "");
+
+  let addedText = 0, addedImg = 0, skipped = 0;
+  const unreadable = [];
+
+  for (const f of files) {
+    if (f.name.startsWith(".")) continue;              // .DS_Store and friends
+    try {
+      if (isText(f)) {
+        const text = await f.text();
+        if (!text.trim()) { unreadable.push(`${f.name} — the file is empty`); continue; }
+        csvRegisterLocalFile(igState.csvPromptPool, f, { name: f.name, text });
+        addedText++;
+      } else if (isImage(f)) {
+        csvRegisterLocalFile(igState.csvImagePool, f, await igReadFile(f));
+        addedImg++;
+      } else {
+        skipped++;
+      }
+    } catch (e) {
+      unreadable.push(`${f.name} — ${e.message || e}`);
+    }
+  }
+  igRefreshModeUI();
+
+  const data = igState.dataFile;
+  const check = data ? validateCsvOnlyData(data) : null;
+  const summary =
+    `Linked ${addedText} prompt file${addedText === 1 ? "" : "s"} and ` +
+    `${addedImg} image${addedImg === 1 ? "" : "s"}` +
+    (skipped ? ` (${skipped} other file${skipped === 1 ? "" : "s"} ignored)` : "") + ".";
+
+  if (unreadable.length || (check && !check.ok)) {
+    alert(summary +
+      (unreadable.length ? `\n\nNot usable:\n${unreadable.map(u => "• " + u).join("\n")}` : "") +
+      (check && !check.ok ? `\n\nStill blocking:\n${check.error}` : ""));
+  } else if (addedText || addedImg) {
+    igUpdateStatus(summary);
+  }
 }
 
 function igReadFile(file) {
@@ -6060,14 +6861,14 @@ async function igRunBatch() {
   if (keep === "cancel") return;
   igState.appendResults = keep === "yes";
 
-  if (cfg.mode === "bulk") {
+  if (isBulkMode(cfg.mode)) {
     if (!igState.dataFile) {
-      alert('Bulk mode needs a data file. Click the green "Upload data file" button and choose a CSV.');
+      alert('Bulk mode needs a data file. Click the green "Upload CSV file" button and choose a CSV.');
       return;
     }
-    const check = validateBulkData(cfg.prompt, igState.dataFile);
+    const check = validateBulkFor(cfg.mode, cfg.prompt, igState.dataFile);
     if (!check.ok) {
-      alert("Cannot start — the data file does not match the prompt:\n\n" + check.error);
+      alert("Cannot start — the CSV cannot be used:\n\n" + check.error);
       return;
     }
     openBulkModal(cfg, check);
@@ -6102,15 +6903,35 @@ async function igRunBulkSelected(cfg, check, rowIndices) {
   const firstVar = check.vars[0];
   const batch = rowIndices.map(rowIdx => {
     const row = data.rows[rowIdx];
+
+    /* CSV-only rows carry their own prompt, their own variables and their own
+       reference-image cell; Bulk rows share the typed prompt. */
+    const rowPrompt = check.csvOnly
+      ? csvOnlyRowPrompt(row, data, check)
+      : applyRowToPrompt(cfg.prompt, row, data.headers);
+
     const varValues = {};
-    check.vars.forEach(v => { varValues[v] = row[v]; });
+    const varsForRow = check.csvOnly
+      ? extractPromptVariables(csvOnlyRowSourceText(row, check)).filter(v => check.vars.includes(v))
+      : check.vars;
+    varsForRow.forEach(v => { varValues[v] = row[v]; });
+
     return {
-      name: bulkCardName(row, data.headers, rowIdx, cfg.model, firstVar, cfg.quality),
+      name: check.csvOnly
+        ? csvOnlyCardName(row, data, check, rowIdx, cfg)
+        : bulkCardName(row, data.headers, rowIdx, cfg.model, firstVar, cfg.quality),
       source: null,
-      prompt: applyRowToPrompt(cfg.prompt, row, data.headers),
+      prompt: rowPrompt,
       varValues,
       bulkRowIndex: rowIdx,
-      rowLabel: String(row[firstVar] || "").trim(),
+      csvOnly: !!check.csvOnly,
+      // Resolved just before the request, so a URL is fetched at most once.
+      refCell: check.csvOnly && check.refCol ? csvCell(row, check.refCol) : "",
+      promptRef: check.csvOnly ? csvCell(row, check.promptCol) : "",
+      entryLabel: check.csvOnly ? (csvCell(row, check.numCol) || String(rowIdx + 1)) : "",
+      rowLabel: check.csvOnly
+        ? (csvCell(row, check.numCol) || String(rowIdx + 1))
+        : String(row[firstVar] || "").trim(),
       status: "pending", loading: false,
       variants: [], activeVariant: 0, total: cfg.variations
     };
@@ -6136,7 +6957,12 @@ async function igStartGeneration(cfg, offset = 0) {
 
   let completed = 0;
   const total = igState.items.length - offset;
-  igSetGenerateState("running", 0, total);
+  /* The button's gradient tracks individual REQUESTS, not cards: one card with
+     four variations would otherwise sit at 0% for the whole run and jump to
+     100% at the end. igGenerateOne ticks this as each variation settles. */
+  igProgress.done = 0;
+  igProgress.total = total * (cfg.variations || 1);
+  igSetGenerateState("running", 0, igProgress.total);
   igUpdateStatus(`Generating 0 / ${total}...`);
 
   const queue = [];
@@ -6148,7 +6974,6 @@ async function igStartGeneration(cfg, offset = 0) {
         const idx = queue.shift();
         await igGenerateOne(idx, cfg);
         completed++;
-        igSetGenerateState("running", completed, total);
         igUpdateStatus(`Generating ${completed} / ${total}...`);
       }
     })());
@@ -6156,6 +6981,7 @@ async function igStartGeneration(cfg, offset = 0) {
   await Promise.all(workers);
 
   igState.running = false;
+  igProgress.total = 0;
   document.getElementById("igResetBtn").disabled = false;
   // Remember which CSV rows produced an image and publish it, so this tab
   // and any other tab on the same prompt + CSV show them as generated.
@@ -6197,7 +7023,9 @@ let bulkModalCtx = null; // { cfg, check, mode }
    "error" — why the file does not match the prompt (bad CSV chip clicked) */
 function openBulkModal(cfg, check, opts) {
   const mode = (opts && opts.mode) || "run";
-  bulkModalCtx = { cfg, check, mode };
+  // promptRow: index of the row whose rewritten request is on screen, or null
+  // for the normal table view.
+  bulkModalCtx = { cfg, check, mode, promptRow: null };
   if (mode === "run") {
     // Default selection: everything not yet generated. If all are done,
     // start empty rather than silently re-charging for the whole file.
@@ -6220,6 +7048,12 @@ function renderBulkModal() {
   const data = igState.dataFile;
   const isRun = mode === "run";
   const table = document.getElementById("bulkTable");
+
+  // The rewritten-prompt view takes over the same modal body.
+  if (bulkModalCtx.promptRow != null) { renderBulkPromptView(); return; }
+  document.getElementById("bulkPromptView").style.display = "none";
+  document.getElementById("bulkPromptTools").style.display = "none";
+  document.querySelector(".bulk-table-wrap").style.display = "";
 
   // Chrome that only makes sense while choosing what to send.
   document.querySelector(".bulk-tools").style.display = isRun ? "" : "none";
@@ -6245,10 +7079,15 @@ function renderBulkModal() {
     p.textContent = (check && check.error) || "The data file could not be validated.";
     const hint = document.createElement("div");
     hint.style.cssText = "margin-top:14px;color:#6b7280;font-size:12px;line-height:1.6;";
-    hint.textContent =
-      "Variables must be UPPERCASE and start with VAR_ in both the prompt and the CSV header row. " +
-      "Write them bare, without braces — e.g. VAR_MAIN_SUBJECT in the prompt and a " +
-      "VAR_MAIN_SUBJECT column in the file.";
+    hint.textContent = (bulkModalCtx.cfg && bulkModalCtx.cfg.mode === "csvonly")
+      ? `Expected header row: ${CSVONLY_NUM_COL}, then any ${IG_VAR_PREFIX} columns, then ` +
+        `${CSVONLY_REF_COL} (optional), then ${CSVONLY_PROMPT_COL}. That last column holds a reference to a ` +
+        `.txt file containing the prompt — a desktop path whose folder is granted with "Link local folder", or an http(s):// URL — ` +
+        `not the prompt text itself. A prompt file may only use variables that have a column and a non-empty ` +
+        `value on the row referencing it.`
+      : "Variables must be UPPERCASE and start with VAR_ in both the prompt and the CSV header row. " +
+        "Write them bare, without braces — e.g. VAR_MAIN_SUBJECT in the prompt and a " +
+        "VAR_MAIN_SUBJECT column in the file.";
     td.append(h, p, hint);
     tr.appendChild(td);
     wrap.appendChild(tr);
@@ -6266,7 +7105,11 @@ function renderBulkModal() {
   const sub = document.getElementById("bulkSubtitle");
   sub.textContent =
     `${data.name} — ${data.rows.length} entr${data.rows.length === 1 ? "y" : "ies"}, ` +
-    `${vars.length} variable${vars.length === 1 ? "" : "s"}: ${vars.join(", ")}` +
+    (check.csvOnly
+      ? `${check.promptFileCount} prompt file${check.promptFileCount === 1 ? "" : "s"}` +
+        (vars.length ? `, ${vars.length} variable${vars.length === 1 ? "" : "s"}: ${vars.join(", ")}` : ", no variables") +
+        (check.refCount ? `, ${check.refCount} reference image${check.refCount === 1 ? "" : "s"}` : "")
+      : `${vars.length} variable${vars.length === 1 ? "" : "s"}: ${vars.join(", ")}`) +
     (isRun ? "" : ` · ${doneCount} already generated`);
   if (check.warnings && check.warnings.length) {
     const w = document.createElement("div");
@@ -6276,9 +7119,14 @@ function renderBulkModal() {
   }
 
   // Extra (non-variable) columns are shown for context but greyed in the head.
-  const extraCols = data.headers
+  let extraCols = data.headers
     .map(h => String(h).trim())
     .filter(h => h && !vars.includes(h));
+  // CSV-only reads best in the file's own order: # first, PROMPT last.
+  if (check.csvOnly) {
+    const rank = c => c === check.numCol ? 0 : c === check.promptCol ? 2 : 1;
+    extraCols = extraCols.slice().sort((a, b) => rank(a) - rank(b));
+  }
 
   table.innerHTML = "";
 
@@ -6308,6 +7156,13 @@ function renderBulkModal() {
   thStat.className = "badge-cell";
   thStat.textContent = "";
   htr.appendChild(thStat);
+  // CSV-only: per-row actions on the rewritten request.
+  if (check.csvOnly) {
+    const thOpt = document.createElement("th");
+    thOpt.className = "opt-cell";
+    thOpt.textContent = "Options";
+    htr.appendChild(thOpt);
+  }
   thead.appendChild(htr);
   table.appendChild(thead);
 
@@ -6337,7 +7192,9 @@ function renderBulkModal() {
     }
 
     const tdName = document.createElement("td");
-    tdName.textContent = bulkCardName(row, data.headers, i, cfg.model, firstVar, cfg.quality);
+    tdName.textContent = check.csvOnly
+      ? csvOnlyCardName(row, data, check, i, cfg)
+      : bulkCardName(row, data.headers, i, cfg.model, firstVar, cfg.quality);
     tdName.style.fontFamily = "ui-monospace, SFMono-Regular, Menlo, monospace";
     tdName.style.fontSize = "11.5px";
     tr.appendChild(tdName);
@@ -6351,7 +7208,12 @@ function renderBulkModal() {
     for (const c of extraCols) {
       const td = document.createElement("td");
       td.textContent = row[c] || "";
-      td.style.color = "#9ca3af";
+      // In CSV-only mode PROMPT is the payload, not incidental context, so it
+      // keeps normal contrast; everything is hover-expandable since the cell
+      // truncates at 260px.
+      const isPromptCol = check.csvOnly && c === check.promptCol;
+      td.style.color = isPromptCol ? "#374151" : "#9ca3af";
+      td.title = row[c] || "";
       tr.appendChild(td);
     }
 
@@ -6365,6 +7227,33 @@ function renderBulkModal() {
     }
     tr.appendChild(tdStat);
 
+    if (check.csvOnly) {
+      const tdOpt = document.createElement("td");
+      tdOpt.className = "opt-cell";
+      const box = document.createElement("span");
+      box.className = "bulk-opts";
+      // The row-level click handler below toggles selection; these must not.
+      box.addEventListener("click", (e) => e.stopPropagation());
+
+      const eye = document.createElement("button");
+      eye.type = "button";
+      eye.className = "bulk-opt-btn";
+      eye.textContent = "👁";
+      eye.title = "Preview the rewritten JSON request for this row";
+      eye.onclick = () => showBulkPromptView(i);
+
+      const copy = document.createElement("button");
+      copy.type = "button";
+      copy.className = "bulk-opt-btn";
+      copy.textContent = "⧉";
+      copy.title = "Copy the rewritten JSON request to the clipboard";
+      copy.onclick = () => copyBulkRowPrompt(i, copy);
+
+      box.append(eye, copy);
+      tdOpt.appendChild(box);
+      tr.appendChild(tdOpt);
+    }
+
     // Clicking anywhere on the row toggles it (selection mode only).
     if (isRun && cb) {
       tr.addEventListener("click", () => { cb.checked = !cb.checked; cb.dispatchEvent(new Event("change")); });
@@ -6376,6 +7265,107 @@ function renderBulkModal() {
   table.appendChild(tbody);
 
   if (isRun) updateBulkCount();
+}
+
+/* ---------- rewritten-prompt preview (CSV-only "Options" column) ----------
+
+   Shown inside the entry picker rather than a second modal, so the back arrow
+   returns to exactly the table the user came from — selection intact. */
+function bulkRowRequestText(rowIndex) {
+  if (!bulkModalCtx) return "";
+  const { cfg, check } = bulkModalCtx;
+  const data = igState.dataFile;
+  const row = data && data.rows[rowIndex];
+  if (!row) return "";
+  return csvOnlyRowRequestText(row, data, check, rowIndex, cfg);
+}
+
+function showBulkPromptView(rowIndex) {
+  if (!bulkModalCtx) return;
+  bulkModalCtx.promptRow = rowIndex;
+  renderBulkModal();
+}
+
+function hideBulkPromptView() {
+  if (!bulkModalCtx) return;
+  bulkModalCtx.promptRow = null;
+  renderBulkModal();
+}
+
+function renderBulkPromptView() {
+  const { cfg, check, mode } = bulkModalCtx;
+  const i = bulkModalCtx.promptRow;
+  const data = igState.dataFile;
+  const row = data.rows[i];
+
+  document.querySelector(".bulk-tools").style.display = "none";
+  document.querySelector(".bulk-table-wrap").style.display = "none";
+  document.getElementById("bulkStartBtn").style.display = "none";
+  document.getElementById("bulkCount").style.display = "none";
+  document.getElementById("bulkPromptTools").style.display = "";
+  document.getElementById("bulkPromptView").style.display = "";
+  document.getElementById("bulkCancelBtn").textContent = mode === "run" ? "Cancel" : "Close";
+
+  const name = csvOnlyCardName(row, data, check, i, cfg);
+  const entry = csvCell(row, check.numCol) || String(i + 1);
+  const refCell = check.refCol ? csvCell(row, check.refCol) : "";
+
+  document.querySelector(".bulk-head h3").textContent = `Rewritten request — entry #${entry}`;
+  const sub = document.getElementById("bulkSubtitle");
+  sub.textContent = `${name} · ${cfg.model ? igModelSlug(cfg.model) : ""} · ${cfg.aspect} · ${igQualityLabel(cfg.quality, cfg.model)}`;
+
+  const meta = document.getElementById("bulkPromptMeta");
+  const promptRef = csvCell(row, check.promptCol);
+  const rowVars = extractPromptVariables(csvOnlyRowSourceText(row, check))
+    .filter(v => check.vars.includes(v));
+  meta.textContent =
+    `This is exactly what is sent for this row. The brief was read from "${promptRef}"` +
+    (rowVars.length ? `, with ${rowVars.join(", ")} substituted from this row.` : ".") +
+    (refCell
+      ? ` The style reference "${refCell}" travels with it as an attachment; only its name appears in the JSON.`
+      : " This row has no style reference.");
+
+  document.getElementById("bulkPromptCode").textContent = bulkRowRequestText(i);
+  document.getElementById("bulkPromptView").scrollTop = 0;
+}
+
+/* Clipboard write, with a synchronous fallback for file:// pages where the
+   async Clipboard API is not available. */
+async function copyTextToClipboard(text) {
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch (_) { /* fall through */ }
+  try {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.setAttribute("readonly", "");
+    ta.style.cssText = "position:fixed;top:-1000px;left:-1000px;opacity:0;";
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand("copy");
+    ta.remove();
+    return ok;
+  } catch (_) { return false; }
+}
+
+/* Brief in-place confirmation on the icon itself — a toast would cover the
+   table the user is still reading. */
+async function copyBulkRowPrompt(rowIndex, btn) {
+  const text = bulkRowRequestText(rowIndex);
+  if (!text) return;
+  const ok = await copyTextToClipboard(text);
+  const original = btn.textContent;
+  btn.textContent = ok ? "✓" : "✕";
+  btn.classList.toggle("copied", ok);
+  btn.title = ok ? "Copied to clipboard" : "Could not copy — select the text in the preview instead";
+  setTimeout(() => {
+    btn.textContent = original;
+    btn.classList.remove("copied");
+    btn.title = "Copy the rewritten JSON request to the clipboard";
+  }, 1400);
 }
 
 function updateBulkCount() {
@@ -6419,6 +7409,34 @@ async function igGenerateOne(idx, cfg) {
   item.activeVariant = 0;
   item.total = cfg.variations;
 
+  /* CSV-only: re-check this row and embed its reference image before spending
+     anything. A row that cannot be built fails on its own without taking the
+     rest of the batch down. */
+  let rowRefImage = null;
+  if (item.csvOnly) {
+    const problem = csvOnlyRowProblem(item);
+    if (problem) {
+      item.status = "error";
+      item.error = problem;
+      item.retryInfo = null;
+      igTickProgress(cfg.variations);
+      igRenderGrid(); igUpdateErrorBanner(); igUpdateDownloadAllBtn();
+      return;
+    }
+    if (item.refCell) {
+      try {
+        rowRefImage = await csvResolveRefImage(item.refCell);
+      } catch (e) {
+        item.status = "error";
+        item.error = e.message || String(e);
+        item.retryInfo = null;
+        igTickProgress(cfg.variations);
+        igRenderGrid(); igUpdateErrorBanner(); igUpdateDownloadAllBtn();
+        return;
+      }
+    }
+  }
+
   const results = [];
   let lastError = null;
   for (let v = 0; v < cfg.variations; v++) {
@@ -6432,8 +7450,11 @@ async function igGenerateOne(idx, cfg) {
         quality: cfg.quality,
         aspect: cfg.aspect,
         editImage: item.source,
-        refImage: igState.refImage,
+        // CSV-only takes its style reference from the row, not the strip.
+        refImage: item.csvOnly ? rowRefImage : igState.refImage,
         varValues: item.varValues || null,
+        entry: item.entryLabel || "",
+        promptFile: item.promptRef || "",
         onRateLimited
       });
       const cost = recordImageCost(cfg.model, cfg.quality, res.openaiSize);
@@ -6447,6 +7468,7 @@ async function igGenerateOne(idx, cfg) {
       lastError = e.message || String(e);
       console.warn(`[IG] variation ${v + 1}/${cfg.variations} failed:`, lastError);
     }
+    igTickProgress(1);
   }
 
   if (results.length === 0) {
@@ -6475,9 +7497,14 @@ async function igRegenerate(idx) {
     // Bulk cards keep their <#>_gen_<Model>_<subject> shape.
     const data = igState.dataFile;
     const row = data && data.rows[item.bulkRowIndex];
-    const firstVar = item.varValues && Object.keys(item.varValues)[0];
-    if (row && firstVar) {
-      item.name = bulkCardName(row, data.headers, item.bulkRowIndex, cfg.model, firstVar, cfg.quality);
+    if (row && item.csvOnly) {
+      const check = validateCsvOnlyData(data);
+      if (check.ok) item.name = csvOnlyCardName(row, data, check, item.bulkRowIndex, cfg);
+    } else {
+      const firstVar = item.varValues && Object.keys(item.varValues)[0];
+      if (row && firstVar) {
+        item.name = bulkCardName(row, data.headers, item.bulkRowIndex, cfg.model, firstVar, cfg.quality);
+      }
     }
   } else {
     // Recover the sequence number from gen_<Model>_<n>[_<Quality>].
@@ -6548,21 +7575,24 @@ async function igDownloadAll() {
    per-entry progress view — so confirm first, then clear everything back to
    defaults. */
 async function igResetAll() {
-  const isBulk = document.getElementById("igMode").value === "bulk";
+  const mode = document.getElementById("igMode").value;
+  const isBulk = isBulkMode(mode);
   const hasValidData = !!igState.dataFile &&
-    validateBulkData(document.getElementById("igPrompt").value, igState.dataFile).ok;
+    validateBulkFor(mode, document.getElementById("igPrompt").value, igState.dataFile).ok;
 
   if (isBulk && hasValidData) {
     const rows = igState.dataFile.rows.length;
     const done = igState.bulkGenerated.size;
+    const linked = csvPoolSize(igState.csvImagePool) + csvPoolSize(igState.csvPromptPool);
     const ok = await showConfirm({
       title: "Reset the Image Generator?",
       okLabel: "Ok to reset",
       bodyHtml:
         "<p>This clears your current bulk setup. You will lose:</p><ul>" +
-        "<li>the typed <strong>prompt</strong></li>" +
+        (mode === "csvonly" ? "" : "<li>the typed <strong>prompt</strong></li>") +
         `<li>the uploaded data file <strong>${escapeHtml(igState.dataFile.name)}</strong> ` +
         `(${rows} entr${rows === 1 ? "y" : "ies"}${done ? `, ${done} already generated` : ""})</li>` +
+        (linked ? `<li>the <strong>${linked} linked file${linked === 1 ? "" : "s"}</strong> (prompt texts and reference images)</li>` : "") +
         "<li>the selected model, quality, aspect ratio, variations and generation mode</li>" +
         "<li>any results shown below</li>" +
         "</ul><p style=\"margin-top:10px;\">Generated images you already downloaded are not affected.</p>"
@@ -6600,6 +7630,10 @@ function igResetEverything() {
   igState.bulkGenerated = new Set();
   igState.bulkSelection = new Set();
   igState.appendResults = false;
+  igState.csvImagePool = new Map();
+  igState.csvImageUrlCache = new Map();
+  igState.csvPromptPool = new Map();
+  igState.csvPromptUrlCache = new Map();
 
   document.getElementById("igPrompt").value = "";
   const d = IG_DEFAULT_CONFIG_VALUES;
@@ -6749,7 +7783,9 @@ document.addEventListener("keydown", (e) => {
     return;
   }
   if (e.key === "Escape" && document.getElementById("bulkModal").classList.contains("visible")) {
-    closeBulkModal();
+    // Inside the rewritten-prompt view, Escape steps back to the table first.
+    if (bulkModalCtx && bulkModalCtx.promptRow != null) hideBulkPromptView();
+    else closeBulkModal();
     return;
   }
   const previewOpen = document.getElementById("previewModal").classList.contains("visible");
@@ -6813,6 +7849,18 @@ document.getElementById("igRefFileInput").addEventListener("change", async (e) =
 document.getElementById("igAddDataBtn").addEventListener("click", () => {
   document.getElementById("igDataFileInput").click();
 });
+document.getElementById("igLinkFolderBtn").addEventListener("click", () => {
+  document.getElementById("igCsvFolderInput").click();
+});
+document.getElementById("igLinkFilesBtn").addEventListener("click", () => {
+  document.getElementById("igCsvFilesInput").click();
+});
+["igCsvFolderInput", "igCsvFilesInput"].forEach(id => {
+  document.getElementById(id).addEventListener("change", async (e) => {
+    await igHandleLocalFiles(e.target.files);
+    e.target.value = "";
+  });
+});
 
 /* ---------- confirm dialog ---------- */
 document.getElementById("confirmOkBtn").addEventListener("click", () => settleConfirm("ok"));
@@ -6826,6 +7874,15 @@ document.getElementById("bulkSelectAllBtn").addEventListener("click", bulkSelect
 document.getElementById("bulkClearBtn").addEventListener("click", bulkClearSelection);
 document.getElementById("bulkCancelBtn").addEventListener("click", closeBulkModal);
 document.getElementById("bulkStartBtn").addEventListener("click", bulkConfirmStart);
+document.getElementById("bulkBackBtn").addEventListener("click", hideBulkPromptView);
+document.getElementById("bulkPromptCopyBtn").addEventListener("click", async (e) => {
+  if (!bulkModalCtx || bulkModalCtx.promptRow == null) return;
+  const btn = e.currentTarget;
+  const ok = await copyTextToClipboard(bulkRowRequestText(bulkModalCtx.promptRow));
+  const label = btn.textContent;
+  btn.textContent = ok ? "Copied ✓" : "Copy failed";
+  setTimeout(() => { btn.textContent = label; }, 1400);
+});
 document.getElementById("bulkModal").addEventListener("click", (e) => {
   if (e.target.id === "bulkModal") closeBulkModal();
 });
