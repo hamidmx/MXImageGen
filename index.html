@@ -1719,8 +1719,9 @@
               <strong>Generation Mode: New — one original image</strong>
               <ul>
                 <li>Your text is never sent raw. It is wrapped into a structured prompt rebuilt for the selected <strong>Drawing Model</strong>, with your words kept as the core instruction.</li>
-                <li>The model is asked for a brand-new, original image. No source picture is attached.</li>
-                <li>The <strong>Reference image</strong> (orange button, max 1) is described as a style guide only — its colours, technique and look are copied, not its subject.</li>
+                <li>The model is asked for a brand-new, original image.</li>
+                <li><strong>Images</strong> (blue button, up to 10) are optional supporting pictures. They all travel with the <em>one</em> request as material for the brief to draw from — subjects, poses, objects, characters — and are explicitly <em>not</em> presented as pictures to reproduce or edit. Leave them off for a purely text-driven image.</li>
+                <li><strong>Reference image</strong> (orange button, up to 3) is a style guide only — colours, technique and look are copied, not the subject. With several, they are treated as one combined style direction.</li>
                 <li><strong>Aspect Ratio</strong> is applied as the authoritative output shape and <em>overrides any ratio you typed</em> in the text.</li>
                 <li><strong>Generation per image</strong> sends that many independent requests, so variations differ genuinely. Browse them with the ‹ › arrows on the result.</li>
                 <li>Results are named <code>gen_&lt;Model&gt;_1</code>, with extra variations as <code>-2</code>, <code>-3</code>.</li>
@@ -1731,9 +1732,9 @@
               <strong>Generation Mode: Edit — recreate the images you attach</strong>
               <ul>
                 <li>Your text becomes the editing instruction, wrapped into a structured prompt for the selected <strong>Drawing Model</strong>.</li>
-                <li><strong>Images to edit</strong> (blue button, up to 20) are sent <em>one request per image</em>, so each one gets its own result box. Their file names are named in the prompt.</li>
+                <li><strong>Images to edit</strong> (blue button, up to 20) are sent <em>one request per image</em>, so each one gets its own result box. Their file names are named in the prompt. (In <strong>New</strong> the same button becomes <strong>Images</strong> and behaves differently: up to 10, all in one request.)</li>
                 <li>Each image is recreated while keeping its subject and composition recognisable, unless your instruction says otherwise.</li>
-                <li>The <strong>Reference image</strong> (orange button, max 1) is a style guide only — its look is copied, not its subject.</li>
+                <li><strong>Reference image</strong> (orange button, up to 3) is a style guide only — the look is copied, not the subject. Several are treated as one combined style direction.</li>
                 <li><strong>Aspect Ratio</strong> is the authoritative output shape and <em>overrides any ratio you typed</em>.</li>
                 <li><strong>Generation per image</strong> multiplies the requests: 5 images × 3 = 15 requests.</li>
                 <li>Results keep each source file's name, with extra variations as <code>-2</code>, <code>-3</code>.</li>
@@ -1774,14 +1775,14 @@
 
       <div class="ig-strip-row">
         <div class="ig-strip-side edit-side">
-          <button type="button" id="igAddEditBtn" class="ig-add-btn blue" title="Add images to edit (Edit mode only, up to 20)"><span class="plus">+</span>Images to edit</button>
+          <button type="button" id="igAddEditBtn" class="ig-add-btn blue" title="Attach images"><span class="plus">+</span><span id="igAddEditLabel">Images</span></button>
           <button type="button" id="igAddDataBtn" class="ig-add-btn green hidden" title="Upload a CSV file"><span class="plus">+</span>Upload CSV file</button>
           <div id="igEditThumbs" class="ig-thumbs"></div>
           <span id="igEditCount" class="ig-count-hint"></span>
         </div>
         <div class="ig-strip-side" id="igRefSide">
           <div id="igRefThumbs" class="ig-thumbs" style="flex:0 0 auto;"></div>
-          <button type="button" id="igAddRefBtn" class="ig-add-btn orange" title="Add one reference image"><span class="plus">+</span>Reference image</button>
+          <button type="button" id="igAddRefBtn" class="ig-add-btn orange" title="Add a style reference image"><span class="plus">+</span>Reference image</button>
           <!-- CSV-only mode: the REFERENCE_IMAGE column names files the browser
                cannot read off disk on its own, so they are linked once here. -->
           <button type="button" id="igLinkFolderBtn" class="ig-add-btn green hidden" title="Grant access to the folder holding the .txt prompts and reference images named in the CSV"><span class="plus">+</span>Link local folder</button>
@@ -1790,7 +1791,7 @@
       </div>
 
       <input type="file" id="igEditFileInput" accept="image/*" multiple hidden />
-      <input type="file" id="igRefFileInput" accept="image/*" hidden />
+      <input type="file" id="igRefFileInput" accept="image/*" multiple hidden />
       <input type="file" id="igDataFileInput" accept=".csv,text/csv" hidden />
       <!-- One folder grant covers both PROMPT_REFERENCE and REFERENCE_IMAGE. -->
       <input type="file" id="igCsvFolderInput" webkitdirectory directory multiple hidden />
@@ -3465,7 +3466,9 @@ function describeAspect(ratio) {
    out the brief itself and Ideogram in particular degrades when the layout
    instructions are buried. */
 function buildImageGenPrompt(opts) {
-  const { userPrompt, mode, editImage, refImage, aspect, varValues } = opts;
+  const { userPrompt, mode, editImage, aspect, varValues } = opts;
+  const refImages = opts.refImages || [];
+  const contextImages = opts.contextImages || [];
   const text = (userPrompt || "").trim();
   const isEdit = mode === "edit" && !!editImage;
   const parts = [];
@@ -3495,18 +3498,37 @@ function buildImageGenPrompt(opts) {
     );
   }
 
-  if (refImage) {
+  /* New mode may carry supporting images alongside the brief. They are
+     material to draw FROM, not a picture to reproduce — spelled out because
+     otherwise a single attachment is often treated as an image to edit. */
+  if (!isEdit && contextImages.length) {
+    const names = contextImages.map((im, i) => `${i + 1}. "${im.name}"`).join("\n");
     parts.push(
-      `\nSTYLE REFERENCE: The attached image "${refImage.name}" defines visual style only — ` +
-      `colour palette, rendering technique, line quality and overall look. Do not copy its subject matter.`
+      `\nSUPPLIED IMAGES (${contextImages.length}) — use them as the brief directs:\n${names}\n` +
+      `They are source material for the new artwork: take from them the subjects, poses, objects, ` +
+      `characters or details the brief asks for. Do NOT simply reproduce or collage them, and do not ` +
+      `treat any single one as an image to edit. The result must be one new, coherent composition.`
     );
   }
 
-  if (isEdit) {
+  if (refImages.length) {
+    const many = refImages.length > 1;
+    const names = refImages.map(r => `"${r.name}"`).join(", ");
     parts.push(
-      `\nATTACHMENTS: the FIRST image ("${editImage.name}") is the one to edit.` +
-      (refImage ? ` The SECOND ("${refImage.name}") is the style reference only.` : "")
+      `\nSTYLE REFERENCE${many ? `S (${refImages.length})` : ""}: ${names} ${many ? "define" : "defines"} visual style only — ` +
+      `colour palette, rendering technique, line quality and overall look. Do not copy ${many ? "their" : "its"} subject matter.` +
+      (many ? ` Treat them as one combined style direction; where they differ, favour what they have in common.` : "")
     );
+  }
+
+  /* Attachment order must be stated whenever more than one image is sent, or
+     the roles blur. It mirrors exactly how callImageGen stacks them. */
+  const manifest = [];
+  if (isEdit) manifest.push(`the image to edit ("${editImage.name}")`);
+  else if (contextImages.length) manifest.push(`${contextImages.length} supplied image(s)`);
+  if (refImages.length) manifest.push(`${refImages.length} style reference(s)`);
+  if (manifest.length && (isEdit || contextImages.length + refImages.length > 1)) {
+    parts.push(`\nATTACHMENTS, in order: ${manifest.join(", then ")}.`);
   }
 
   // Authoritative output shape. When the brief also mentions a ratio or
@@ -3555,12 +3577,14 @@ function buildImageGenPromptJSON(opts) {
       "no substitutions, no pluralisation changes.";
   }
 
-  if (refImage) {
+  const refList = Array.isArray(refImage) ? refImage : (refImage ? [refImage] : []);
+  if (refList.length) {
     payload.style_reference = {
-      image: refImage.name,
+      images: refList.map(r => r.name),
       attached: true,
       use: "Visual style only — colour palette, rendering technique, line quality and overall look. " +
-           "Do not copy its subject matter."
+           "Do not copy their subject matter." +
+           (refList.length > 1 ? " Treat them as one combined style direction." : "")
     };
   }
 
@@ -3822,14 +3846,23 @@ async function igCallIdeogram(modelKey, prompt, selectedRatio, quality, images, 
 
 /* Dispatcher for the Image Generator page. */
 async function callImageGen(opts) {
-  const { modelKey, userPrompt, mode, quality, aspect, editImage, refImage, varValues, entry, promptFile, onRateLimited } = opts;
+  const { modelKey, userPrompt, mode, quality, aspect, editImage, varValues, entry, promptFile, onRateLimited } = opts;
+  // refImage accepts one image or a list; contextImages accompany a New-mode brief.
+  const refImages = Array.isArray(opts.refImage)
+    ? opts.refImage.filter(Boolean)
+    : (opts.refImage ? [opts.refImage] : []);
+  const contextImages = (opts.contextImages || []).filter(Boolean);
+
   const prompt = mode === "csvonly"
-    ? buildImageGenPromptJSON({ userPrompt, refImage, aspect, varValues, entry, promptFile })
-    : buildImageGenPrompt({ userPrompt, mode, editImage, refImage, aspect, varValues });
-  // Order matters: the image being edited always comes first.
+    ? buildImageGenPromptJSON({ userPrompt, refImage: refImages, aspect, varValues, entry, promptFile })
+    : buildImageGenPrompt({ userPrompt, mode, editImage, refImages, contextImages, aspect, varValues });
+
+  /* Order matters and must match the ATTACHMENTS manifest in the prompt:
+     the image being edited (or the supplied images) first, references last. */
   const images = [];
   if (mode === "edit" && editImage) images.push(editImage);
-  if (refImage) images.push(refImage);
+  else if (mode === "new") images.push(...contextImages);
+  images.push(...refImages);
 
   if (modelKey === "openai_image_2") {
     return await igCallOpenAI(modelKey, prompt, aspect, quality, images, onRateLimited);
@@ -4544,12 +4577,12 @@ const IG_DEFAULT_CONFIG_VALUES = {
   aspect: IG_CUSTOM_RATIO,
   variations: "1",
   mode: "new",
-  refImage: null
+  refImages: []
 };
 
 const PAGE_CONFIG_KEYS = {
   draw:     ["subjects","aspect","steps","age","pathWidth","style","lineStyle","model","prompt","quality"],
-  imagegen: ["prompt","model","quality","aspect","variations","mode","refImage"]
+  imagegen: ["prompt","model","quality","aspect","variations","mode","refImages"]
 };
 
 /* Compare attached images cheaply. The stored value is a full data URL, and
@@ -4557,6 +4590,17 @@ const PAGE_CONFIG_KEYS = {
 function refImageSignature(r) {
   if (!r) return "";
   return `${r.name}|${r.mime}|${(r.base64 || "").length}`;
+}
+
+/* Configs written before reference images became a list stored a single
+   `refImage`; normalise both shapes to an array on the way in. */
+function toRefImageList(v) {
+  if (Array.isArray(v)) return v.filter(Boolean);
+  return v ? [v] : [];
+}
+
+function refImagesSignature(v) {
+  return toRefImageList(v).map(refImageSignature).join("~");
 }
 
 function configStorageKeyFor(page) {
@@ -4587,8 +4631,8 @@ function persistConfigs(arr) {
   } catch (e) {
     console.warn("Failed to persist configs:", e);
     try {
-      const stripped = arr.map(c => (c.values && c.values.refImage)
-        ? { ...c, values: { ...c.values, refImage: null } }
+      const stripped = arr.map(c => (c.values && (c.values.refImages || c.values.refImage))
+        ? { ...c, values: { ...c.values, refImages: [], refImage: null } }
         : c);
       localStorage.setItem(key, JSON.stringify(stripped));
       alert(
@@ -4613,8 +4657,8 @@ function snapshotConfig() {
       aspect:     document.getElementById("igAspect").value,
       variations: document.getElementById("igVariations").value,
       mode:       document.getElementById("igMode").value,
-      // Saved with the config so restoring it brings the style reference back.
-      refImage:   igState.refImage
+      // Saved with the config so restoring it brings the style references back.
+      refImages:  igState.refImages
     };
   }
   return {
@@ -4641,8 +4685,10 @@ function applyConfigValues(v, name) {
     if (v.quality !== undefined) document.getElementById("igQuality").value = v.quality;
     if (v.variations !== undefined) document.getElementById("igVariations").value = v.variations;
     if (v.mode !== undefined) document.getElementById("igMode").value = v.mode;
-    // Restore (or clear) the style reference that was saved with the config.
-    if (v.refImage !== undefined) igState.refImage = v.refImage || null;
+    // Restore (or clear) the style references saved with the config, accepting
+    // the pre-list `refImage` shape from older saves.
+    if (v.refImages !== undefined) igState.refImages = toRefImageList(v.refImages);
+    else if (v.refImage !== undefined) igState.refImages = toRefImageList(v.refImage);
     if (name) {
       selectedConfigName = name;
       justSavedValues = snapshotConfig();
@@ -4841,7 +4887,7 @@ function valuesEqual(a, b) {
   const keys = PAGE_CONFIG_KEYS[currentPage] || PAGE_CONFIG_KEYS.draw;
   return keys.every(k => {
     // Attached images compare by a short signature, never by their bytes.
-    if (k === "refImage") return refImageSignature(a[k]) === refImageSignature(b[k]);
+    if (k === "refImages") return refImagesSignature(a[k]) === refImagesSignature(b[k]);
     return String(a[k] ?? "") === String(b[k] ?? "");
   });
 }
@@ -5168,7 +5214,19 @@ function switchPage(page) {
 /* ===========================================================
    IMAGE GENERATOR — state & UI
    =========================================================== */
+/* Attachment limits, per Generation Mode.
+
+   Edit  — one result card per source image, so the cap is about how many
+           requests you are willing to fire.
+   New   — the images are extra context for ONE image, all sent together with
+           the prompt, so the cap is about how much a single request can carry. */
 const IG_MAX_EDIT_IMAGES = 20;
+const IG_MAX_NEW_IMAGES = 10;
+const IG_MAX_REF_IMAGES = 3;
+
+function igMaxAttachImages(mode) {
+  return mode === "edit" ? IG_MAX_EDIT_IMAGES : IG_MAX_NEW_IMAGES;
+}
 
 /* Short model names used when naming freshly generated images:
    gen_<Model>_<n>  ->  gen_NanoBananaPro_1, gen_GPT_1, gen_Ideogram_1 */
@@ -5968,8 +6026,8 @@ function csvOnlyCardName(row, data, check, rowIndex, cfg) {
 const igState = {
   items: [],        // { name, status, variants:[{dataUrl,base64,mime,cost}], activeVariant, ... }
   running: false,
-  editImages: [],   // { name, base64, mime, dataUrl }
-  refImage: null,   // { name, base64, mime, dataUrl }
+  editImages: [],   // { name, base64, mime, dataUrl } — sources (Edit) or context (New)
+  refImages: [],    // up to IG_MAX_REF_IMAGES style references
   dataFile: null,   // bulk mode: { name, headers:[], rows:[{col:value}] }
   bulkGenerated: new Set(),  // row indices already generated OK this session
   bulkSelection: new Set(),  // row indices ticked in the picker
@@ -6126,10 +6184,12 @@ function igRefreshStartBtn() {
   btn.title = "";
 }
 
-/* Blue "Images to edit" shows for New/Edit (enabled only in Edit);
-   in either bulk mode it is replaced by the green "Upload CSV file" button.
+/* The blue attach button serves New and Edit with different meanings:
+   "Images" in New (up to 10 pictures the brief can draw from, all sent with
+   one request) and "Images to edit" in Edit (one result card per source). In
+   either bulk mode it is replaced by the green "Upload CSV file" button.
 
-   "Bulk Images CSV Only" goes further: the prompt and the reference image
+   "Bulk Images CSV Only" goes further: the prompt and the reference images
    both live in the file, so the prompt box is frozen and the orange
    "Reference image" button is swapped for the local-file link buttons. */
 function igRefreshModeUI() {
@@ -6144,10 +6204,18 @@ function igRefreshModeUI() {
   editBtn.classList.toggle("hidden", isBulk);
   dataBtn.classList.toggle("hidden", !isBulk);
 
-  editBtn.disabled = !isEdit || igState.editImages.length >= IG_MAX_EDIT_IMAGES;
-  editBtn.title = isEdit
-    ? `Add images to edit (up to ${IG_MAX_EDIT_IMAGES})`
-    : 'Switch Generation Mode to "Edit" to attach images';
+  // New and Edit both attach images; only the meaning and the cap differ.
+  const attachMax = igMaxAttachImages(mode);
+  const attachN = igState.editImages.length;
+  document.getElementById("igAddEditLabel").textContent = isEdit ? "Images to edit" : "Images";
+  editBtn.disabled = isBulk || attachN >= attachMax;
+  editBtn.title = isBulk
+    ? 'Switch Generation Mode to "New" or "Edit" to attach images'
+    : (attachN >= attachMax
+        ? `Maximum ${attachMax} image${attachMax === 1 ? "" : "s"} reached`
+        : (isEdit
+            ? `Add images to edit — one result per image (up to ${IG_MAX_EDIT_IMAGES})`
+            : `Add images for the prompt to draw from — all sent with one request (up to ${IG_MAX_NEW_IMAGES})`));
 
   // Frozen prompt: the file supplies one per row.
   promptEl.readOnly = isCsvOnly;
@@ -6240,7 +6308,7 @@ function igRenderThumbs() {
       }));
     });
     countEl.textContent = igState.editImages.length
-      ? `${igState.editImages.length}/${IG_MAX_EDIT_IMAGES}`
+      ? `${igState.editImages.length}/${igMaxAttachImages(mode)}`
       : "";
   }
 
@@ -6263,13 +6331,26 @@ function igRenderThumbs() {
       ].join("\n");
       refWrap.appendChild(chip);
     }
-  } else if (igState.refImage) {
-    refWrap.appendChild(igMakeThumb(igState.refImage, () => {
-      igState.refImage = null;
-      igRenderThumbs();
-    }));
+  } else {
+    igState.refImages.forEach((img, i) => {
+      refWrap.appendChild(igMakeThumb(img, () => {
+        igState.refImages.splice(i, 1);
+        igRenderThumbs();
+      }));
+    });
+    if (igState.refImages.length) {
+      const n = document.createElement("span");
+      n.className = "ig-count-hint";
+      n.textContent = `${igState.refImages.length}/${IG_MAX_REF_IMAGES}`;
+      refWrap.appendChild(n);
+    }
   }
-  document.getElementById("igAddRefBtn").disabled = !!igState.refImage;
+  const addRef = document.getElementById("igAddRefBtn");
+  const full = igState.refImages.length >= IG_MAX_REF_IMAGES;
+  addRef.disabled = full;
+  addRef.title = full
+    ? `Maximum ${IG_MAX_REF_IMAGES} reference images reached`
+    : `Add a style reference image (up to ${IG_MAX_REF_IMAGES})`;
 }
 
 /* Outer wrapper holds the ✕ so it can sit fully outside the picture;
@@ -6492,12 +6573,16 @@ function igReadFile(file) {
   });
 }
 
+/* Attachments for New (context images) and Edit (sources). The cap follows
+   the current mode, so switching to New with more than 10 already attached is
+   reported rather than silently truncated at generate time. */
 async function igHandleEditFiles(fileList) {
   const files = Array.from(fileList || []);
-  const room = IG_MAX_EDIT_IMAGES - igState.editImages.length;
-  if (room <= 0) { alert(`Maximum ${IG_MAX_EDIT_IMAGES} images to edit.`); return; }
+  const max = igMaxAttachImages(document.getElementById("igMode").value);
+  const room = max - igState.editImages.length;
+  if (room <= 0) { alert(`Maximum ${max} image${max === 1 ? "" : "s"} in this mode.`); return; }
   const take = files.slice(0, room);
-  if (files.length > room) alert(`Only ${room} more image(s) can be added (max ${IG_MAX_EDIT_IMAGES}).`);
+  if (files.length > room) alert(`Only ${room} more image(s) can be added (max ${max}).`);
   for (const f of take) {
     try { igState.editImages.push(await igReadFile(f)); }
     catch (e) { console.warn(e); }
@@ -6506,10 +6591,18 @@ async function igHandleEditFiles(fileList) {
 }
 
 async function igHandleRefFile(fileList) {
-  const f = (fileList || [])[0];
-  if (!f) return;
-  try { igState.refImage = await igReadFile(f); igRenderThumbs(); }
-  catch (e) { alert(e.message); }
+  const files = Array.from(fileList || []);
+  if (files.length === 0) return;
+  const room = IG_MAX_REF_IMAGES - igState.refImages.length;
+  if (room <= 0) { alert(`Maximum ${IG_MAX_REF_IMAGES} reference images.`); return; }
+  const take = files.slice(0, room);
+  if (files.length > room) alert(`Only ${room} more reference image(s) can be added (max ${IG_MAX_REF_IMAGES}).`);
+  for (const f of take) {
+    try { igState.refImages.push(await igReadFile(f)); }
+    catch (e) { alert(e.message); }
+  }
+  igRenderThumbs();
+  refreshSaveConfigStatus();
 }
 
 /* ---------- results rendering (with variation carousel) ---------- */
@@ -6886,10 +6979,13 @@ async function igRunBatch() {
       variants: [], activeVariant: 0, total: cfg.variations
     }));
   } else {
-    // Fresh generations are named after the model: gen_<Model>_<n>
+    /* New mode: one card. Any attached images ride along with the prompt as
+       source material for that single image, rather than each spawning their
+       own result the way Edit mode does. */
     batch = [{
       name: igNewCardName(cfg, igNextNewOrdinal(cfg)),
       source: null,
+      contextImages: cfg.mode === "new" ? igState.editImages.slice(0, IG_MAX_NEW_IMAGES) : [],
       status: "pending", loading: false,
       variants: [], activeVariant: 0, total: cfg.variations
     }];
@@ -7451,7 +7547,8 @@ async function igGenerateOne(idx, cfg) {
         aspect: cfg.aspect,
         editImage: item.source,
         // CSV-only takes its style reference from the row, not the strip.
-        refImage: item.csvOnly ? rowRefImage : igState.refImage,
+        refImage: item.csvOnly ? rowRefImage : igState.refImages,
+        contextImages: item.contextImages || [],
         varValues: item.varValues || null,
         entry: item.entryLabel || "",
         promptFile: item.promptRef || "",
@@ -7625,7 +7722,7 @@ function escapeHtml(s) {
 function igResetEverything() {
   igState.items = [];
   igState.editImages = [];
-  igState.refImage = null;
+  igState.refImages = [];
   igState.dataFile = null;
   igState.bulkGenerated = new Set();
   igState.bulkSelection = new Set();
