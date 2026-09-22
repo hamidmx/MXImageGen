@@ -362,17 +362,82 @@
     font-size: 13px;
     font-family: inherit;
   }
-  .save-box input:focus {
+  .save-box input:focus,
+  .save-box textarea:focus {
     outline: none;
     border-color: #2563eb;
     box-shadow: 0 0 0 3px rgba(37,99,235,0.15);
   }
+  .save-box textarea {
+    width: 100%;
+    min-height: 70px;
+    resize: vertical;
+    padding: 9px 11px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 13px;
+    font-family: inherit;
+    line-height: 1.5;
+  }
+  .save-box .save-field { margin-top: 12px; }
   .save-actions {
     display: flex;
     justify-content: flex-end;
     gap: 8px;
     margin-top: 16px;
   }
+  /* Delete sits apart from Cancel/Save so it is never a mis-click. */
+  .save-actions .danger {
+    margin-right: auto;
+    border: none;
+    background: #dc2626;
+    color: #fff;
+  }
+  .save-actions .danger:hover { background: #b91c1c; }
+  /* Where the config's attachments go when the browser cache cannot hold them. */
+  .save-file-note {
+    margin-top: 12px;
+    padding: 9px 11px;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 6px;
+    font-size: 11.5px;
+    line-height: 1.6;
+    color: #1e3a5f;
+  }
+  .save-file-note code {
+    background: #dbeafe;
+    padding: 1px 4px;
+    border-radius: 3px;
+  }
+  .save-file-note label {
+    display: flex !important;
+    align-items: flex-start;
+    gap: 7px;
+    margin: 7px 0 0 !important;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .save-file-note input[type="checkbox"] {
+    width: auto;
+    margin-top: 1px;
+    flex: 0 0 auto;
+  }
+  .configs-tools { cursor: default; padding: 6px 8px !important; }
+  .configs-tool-btn {
+    flex: 1;
+    padding: 5px 8px;
+    font-size: 11px;
+    font-weight: 600;
+    font-family: inherit;
+    border: 1px solid #cbd5e1;
+    border-radius: 5px;
+    background: #fff;
+    color: #334155;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .configs-tool-btn:hover { background: #e2e8f0; }
   .save-warning, .save-config-warning {
     color: #c2410c;
     font-size: 12px;
@@ -463,6 +528,49 @@
     pointer-events: none;
   }
   .preview-caption.visible { display: block; }
+
+  /* Original file name, pinned to the top-left of the preview. */
+  .preview-filename {
+    position: absolute;
+    top: 14px; left: 16px;
+    z-index: 3;
+    max-width: 55vw;
+    background: rgba(0,0,0,0.62);
+    color: #f3f4f6;
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    padding: 5px 10px;
+    border-radius: 6px;
+    display: none;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    pointer-events: none;
+  }
+  .preview-filename.visible { display: block; }
+
+  /* Download, pinned top-right — clear of the close affordance. */
+  .preview-download {
+    position: absolute;
+    top: 14px; right: 16px;
+    z-index: 4;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(0,0,0,0.62);
+    color: #f3f4f6;
+    border: 1px solid rgba(255,255,255,0.28);
+    border-radius: 6px;
+    padding: 5px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+  }
+  .preview-download:hover { background: rgba(0,0,0,0.85); color: #fff; border-color: rgba(255,255,255,0.5); }
+  .preview-download.done { background: #16a34a; border-color: #16a34a; color: #fff; }
   .grid-fields {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -1651,7 +1759,9 @@
         <select id="model">
           <option value="pro" selected>Nano Banana Pro</option>
           <option value="v2">Nano Banana 2</option>
-          <option value="openai_image_2">ChatGPT Image 2.0</option>
+          <option value="openai_image_2">GPT Image 2 (lower cost)</option>
+            <option value="openai_image_25_sunburst">GPT Image 2.5 Sunburst</option>
+            <option value="openai_image_25_flare">GPT Image 2.5 Flare</option>
           <option value="ideogram_v3">Ideogram V3 (needs local proxy)</option>
         </select>
       </div>
@@ -1803,7 +1913,9 @@
           <select id="igModel">
             <option value="pro" selected>Nano Banana Pro</option>
             <option value="v2">Nano Banana 2</option>
-            <option value="openai_image_2">ChatGPT Image 2.0</option>
+            <option value="openai_image_2">GPT Image 2 (lower cost)</option>
+            <option value="openai_image_25_sunburst">GPT Image 2.5 Sunburst</option>
+            <option value="openai_image_25_flare">GPT Image 2.5 Flare</option>
             <option value="ideogram_v3">Ideogram V3 (needs local proxy)</option>
           </select>
         </div>
@@ -1962,6 +2074,10 @@
 </div>
 
 <div id="previewModal" class="preview-modal">
+  <div id="previewFilename" class="preview-filename"></div>
+  <button type="button" id="previewDownloadBtn" class="preview-download" title="Download this image">
+    <span aria-hidden="true">↓</span>Download
+  </button>
   <button type="button" id="previewPrev" class="preview-nav prev" title="Previous">&#8249;</button>
   <div id="previewStage" class="preview-stage"><img id="previewImg" alt="" /></div>
   <button type="button" id="previewNext" class="preview-nav next" title="Next">&#8250;</button>
@@ -1976,12 +2092,26 @@
     <label for="saveNameInput">Config name:</label>
     <input id="saveNameInput" type="text" placeholder="e.g. Lions kawaii grayblack" />
     <div id="saveNameWarning" class="save-warning">This name was used before</div>
+    <div class="save-field">
+      <label for="saveDescInput">Description:</label>
+      <textarea id="saveDescInput" placeholder="What this config is for — subject, style, model, anything worth remembering."></textarea>
+    </div>
+    <div class="save-file-note" id="saveFileNote">
+      Attachments (images and references) are too large for the browser cache, and anything kept there
+      is lost when you clear history. Saving a copy writes a self-contained
+      <code>&lt;name&gt;.json</code> you can keep in the project's <code>MyConfigs</code> folder and
+      re-import at any time.
+      <label><input type="checkbox" id="saveToFileChk" /> <span id="saveToFileLabel">Also save a file for MyConfigs</span></label>
+    </div>
     <div class="save-actions">
+      <button id="saveDeleteBtn" type="button" class="danger">Delete</button>
       <button id="saveCancelBtn" type="button">Cancel</button>
       <button id="saveConfirmBtn" type="button" class="primary">Save</button>
     </div>
   </div>
 </div>
+
+<input type="file" id="configImportInput" accept=".json,application/json" multiple hidden />
 
 <script>
 /* ===========================================================
@@ -2044,8 +2174,20 @@ const MODEL_MAP = {
   pro: "gemini-3-pro-image-preview",
   v2: "gemini-3.1-flash-image-preview",
   openai_image_2: "gpt-image-2",
+  openai_image_25_sunburst: "gpt-image-2.5-sunburst",
+  openai_image_25_flare: "gpt-image-2.5-flare",
   ideogram_v3: "ideogram-v3"
 };
+
+/* Every OpenAI image model shares one call path, size solver and cost model,
+   so behaviour keys off this rather than a specific id. */
+const OPENAI_MODEL_KEYS = new Set(["openai_image_2", "openai_image_25_sunburst", "openai_image_25_flare"]);
+function isOpenAIModel(key) { return OPENAI_MODEL_KEYS.has(key); }
+
+/* gpt-image-2.5 adds the xhigh and max fidelity tiers on top of
+   low/medium/high; gpt-image-2 stops at high.
+   https://developers.openai.com/api/docs/guides/image-generation */
+function openaiSupportsHighTiers(key) { return key !== "openai_image_2"; }
 
 const SUPPORTED_RATIOS = {
   pro: ["1:1", "2:3", "3:2", "3:4", "4:3", "4:5", "5:4", "9:16", "16:9", "21:9"],
@@ -2053,6 +2195,10 @@ const SUPPORTED_RATIOS = {
   // gpt-image-2 accepts ANY size inside its constraints (edges multiple of 16,
   // max edge 3840, aspect <= 3:1), so it gets the same ratio choice as Gemini.
   openai_image_2: ["1:1", "2:3", "3:2", "3:4", "4:3", "4:5", "5:4", "9:16", "16:9", "21:9"],
+  // 2.5 keeps gpt-image-2's flexible sizing: multiples of 16, aspect 1:3..3:1,
+  // max edge 3840, 655360..8294400 total pixels — so the same ratio list holds.
+  openai_image_25_sunburst: ["1:1", "2:3", "3:2", "3:4", "4:3", "4:5", "5:4", "9:16", "16:9", "21:9"],
+  openai_image_25_flare:    ["1:1", "2:3", "3:2", "3:4", "4:3", "4:5", "5:4", "9:16", "16:9", "21:9"],
   // Ideogram v3 supports a fixed enum of aspect ratios (colon becomes "x" in
   // the API call). We surface them all in the dropdown.
   ideogram_v3: ["1:1", "2:3", "3:2", "3:4", "4:3", "9:16", "16:9", "10:16", "16:10"]
@@ -2107,10 +2253,34 @@ const OPENAI_MAX_PIXELS = 8294400; // 3840 x 2160
 const OPENAI_MAX_ASPECT = 3;       // longest : shortest
 
 // Target longest edge for each UI tier.
-const OPENAI_TIER_LONG_EDGE = { "1K": 1024, "2K": 2048, "4K": 3840 };
+const OPENAI_TIER_LONG_EDGE = { "1K": 1024, "2K": 2048, "4K": 3840, "4K_MAX": 3840 };
 
-// Map UI quality (1K/2K/4K) → OpenAI fidelity tier (low/medium/high).
-const OPENAI_QUALITY_MAP = { "1K": "low", "2K": "medium", "4K": "high" };
+/* Map UI quality tier → OpenAI fidelity. `quality` controls rendering
+   fidelity and cost only; pixel dimensions come solely from `size`.
+   gpt-image-2 tops out at "high"; 2.5 exposes "xhigh" and "max" as well. */
+const OPENAI_QUALITY_MAP = { "1K": "low", "2K": "medium", "4K": "high", "4K_MAX": "max" };
+
+/* Quality tiers offered for a model. gpt-image-2.5 gains a "4K Max" tier that
+   maps to OpenAI's `max` fidelity; everything else stops at 4K (`high`). */
+function qualityOptionsFor(modelKey) {
+  const base = [
+    { value: "1K", label: "1K" },
+    { value: "2K", label: "2K" },
+    { value: "4K", label: "4K" }
+  ];
+  if (isOpenAIModel(modelKey) && openaiSupportsHighTiers(modelKey)) {
+    base.push({ value: "4K_MAX", label: "4K Max" });
+  }
+  return base;
+}
+
+/* Resolve the UI tier to a fidelity this particular model accepts. Picking
+   "4K Max" and then switching to gpt-image-2 must not send "max". */
+function openaiQualityFor(modelKey, tier) {
+  const q = OPENAI_QUALITY_MAP[tier] || "medium";
+  if (!openaiSupportsHighTiers(modelKey) && (q === "max" || q === "xhigh")) return "high";
+  return q;
+}
 
 /* Turn an aspect ratio + tier into a concrete "WxH" that satisfies every
    gpt-image-2 constraint: multiples of 16, max edge 3840, aspect <= 3:1 and
@@ -2258,7 +2428,22 @@ const PRICING = {
 const OPENAI_PRICING = {
   low:    { "1024x1024": 0.006, "1024x1536": 0.005, "1536x1024": 0.005 },
   medium: { "1024x1024": 0.053, "1024x1536": 0.041, "1536x1024": 0.041 },
-  high:   { "1024x1024": 0.211, "1024x1536": 0.165, "1536x1024": 0.165 }
+  high:   { "1024x1024": 0.211, "1024x1536": 0.165, "1536x1024": 0.165 },
+  // xhigh / max are 2.5-only tiers with no published per-image table; scaled
+  // from `high` by their extra output-token load. Indicative, like the
+  // non-1024 sizes below.
+  xhigh:  { "1024x1024": 0.317, "1024x1536": 0.248, "1536x1024": 0.248 },
+  max:    { "1024x1024": 0.422, "1024x1536": 0.330, "1536x1024": 0.330 }
+};
+
+/* gpt-image-2.5 (both Sunburst and Flare) is billed at exactly TWICE
+   gpt-image-2's token rates — $8/$30 per 1M image in/out vs $4/$15 — so the
+   per-image estimate is the same table doubled.
+   https://developers.openai.com/api/docs/models/gpt-image-2.5-sunburst */
+const OPENAI_MODEL_PRICE_FACTOR = {
+  openai_image_2: 1,
+  openai_image_25_sunburst: 2,
+  openai_image_25_flare: 2
 };
 
 /* OpenAI publishes exact per-image prices only for the three 1024-class
@@ -3035,7 +3220,7 @@ async function callOpenAIImage(modelKey, tpl, vars, subject, selectedRatio, qual
   // gpt-image-2 takes arbitrary sizes, so the selected ratio is honoured
   // exactly and the 1K/2K/4K tier sets the real pixel dimensions.
   const size = openaiSizeFor(selectedRatio, quality);
-  const oaQuality = OPENAI_QUALITY_MAP[quality] || "medium";
+  const oaQuality = openaiQualityFor(modelKey, quality);
   const fullPrompt = buildOpenAIPrompt(tpl, vars, subject);
   console.log("[OpenAI request]", { model: modelId, size: size, quality: oaQuality, promptLength: fullPrompt.length });
   const openaiKey = requireApiKey("openai");
@@ -3373,7 +3558,7 @@ async function callIdeogramImage(modelKey, tpl, vars, subject, selectedRatio, qu
    prompt-cache benefits across batches of subjects). The OpenAI and
    Ideogram paths build their own subject-led prompt from the template. */
 async function callImageModel(modelKey, tpl, vars, subject, selectedRatio, quality, onRateLimited) {
-  if (modelKey === "openai_image_2") {
+  if (isOpenAIModel(modelKey)) {
     return await callOpenAIImage(modelKey, tpl, vars, subject, selectedRatio, quality, onRateLimited);
   }
   if (modelKey === "ideogram_v3") {
@@ -3686,7 +3871,7 @@ async function igCallOpenAI(modelKey, prompt, selectedRatio, quality, images, on
   // gpt-image-2 takes arbitrary sizes, so the selected ratio is honoured
   // exactly and the 1K/2K/4K tier sets the real pixel dimensions.
   const size = openaiSizeFor(selectedRatio, quality);
-  const oaQuality = OPENAI_QUALITY_MAP[quality] || "medium";
+  const oaQuality = openaiQualityFor(modelKey, quality);
   const openaiKey = requireApiKey("openai");
   const isEdit = images.length > 0;
   const endpoint = isEdit ? OPENAI_EDIT_API_BASE : OPENAI_API_BASE;
@@ -3864,7 +4049,7 @@ async function callImageGen(opts) {
   else if (mode === "new") images.push(...contextImages);
   images.push(...refImages);
 
-  if (modelKey === "openai_image_2") {
+  if (isOpenAIModel(modelKey)) {
     return await igCallOpenAI(modelKey, prompt, aspect, quality, images, onRateLimited);
   }
   if (modelKey === "ideogram_v3") {
@@ -4009,10 +4194,11 @@ function promptSetBalance() {
 
 function recordImageCost(modelKey, quality, openaiSize) {
   let price;
-  if (modelKey === "openai_image_2") {
-    const q = OPENAI_QUALITY_MAP[quality] || "medium";
+  if (isOpenAIModel(modelKey)) {
+    const q = openaiQualityFor(modelKey, quality);
     price = openaiPriceFor(q, openaiSize);
     if (price === null) return null;
+    price *= (OPENAI_MODEL_PRICE_FACTOR[modelKey] || 1);
   } else if (modelKey === "ideogram_v3") {
     const q = ["TURBO", "DEFAULT", "QUALITY"].includes(quality) ? quality : "DEFAULT";
     price = IDEOGRAM_PRICING[q];
@@ -4032,7 +4218,7 @@ function recordImageCost(modelKey, quality, openaiSize) {
 
 function updateCostCounter() {
   const amount = `$${state.totalCost.toFixed(4)}`;
-  const title = `Estimated cost since last reset across ${state.imageCount} image(s). Approximate, based on published per-image rates: Google — Pro 1K/2K $0.134, Pro 4K $0.24, Flash 1K $0.067, Flash 2K $0.101, Flash 4K $0.151. OpenAI gpt-image-2 — published rates cover the 1024-class sizes (low ~$0.005, medium ~$0.041, high ~$0.165 for 3:2 / 2:3; square slightly higher); 2K and 4K are estimated by scaling those with pixel count, so treat them as indicative. Ideogram V3 — Turbo $0.03, Default $0.06, Quality $0.09.`;
+  const title = `Estimated cost since last reset across ${state.imageCount} image(s). Approximate, based on published per-image rates: Google — Pro 1K/2K $0.134, Pro 4K $0.24, Flash 1K $0.067, Flash 2K $0.101, Flash 4K $0.151. OpenAI gpt-image-2 — published rates cover the 1024-class sizes (low ~$0.005, medium ~$0.041, high ~$0.165 for 3:2 / 2:3; square slightly higher); 2K and 4K are estimated by scaling those with pixel count, so treat them as indicative. GPT Image 2.5 Sunburst and Flare are billed at twice gpt-image-2's token rates ($8/$30 vs $4/$15 per 1M image in/out), so their estimates are the same table doubled; their 4K Max tier has no published per-image price and is scaled from high. Ideogram V3 — Turbo $0.03, Default $0.06, Quality $0.09.`;
   // Both pages show the same shared counter.
   for (const id of ["costAmount", "igCostAmount"]) {
     const el = document.getElementById(id);
@@ -4091,7 +4277,7 @@ function renderGrid() {
       img.alt = item.subject;
       img.style.cursor = "zoom-in";
       img.title = "Click to preview";
-      img.addEventListener("click", () => openPreview(item.dataUrl));
+      img.addEventListener("click", () => openPreviewNamed(item.dataUrl, drawFileName(item), drawFileBaseName(item)));
       thumb.appendChild(img);
       const dimBadge = document.createElement("div");
       dimBadge.className = "dim-badge";
@@ -4126,7 +4312,7 @@ function renderGrid() {
     const preview = document.createElement("button");
     preview.textContent = "Preview";
     preview.disabled = item.status !== "done";
-    preview.onclick = () => openPreview(item.dataUrl);
+    preview.onclick = () => openPreviewNamed(item.dataUrl, drawFileName(item), drawFileBaseName(item));
 
     const dl = document.createElement("button");
     dl.textContent = "Download";
@@ -4312,10 +4498,16 @@ function drawFileBaseName(item) {
   return q ? `${base}_${q}` : base;
 }
 
+// Full file name, extension included — the single source of truth for
+// downloads and for the name shown in the preview.
+function drawFileName(item) {
+  return `${drawFileBaseName(item)}.${extFromMime(item.mime)}`;
+}
+
 function downloadSingle(item) {
   const a = document.createElement("a");
   a.href = item.dataUrl;
-  a.download = `${drawFileBaseName(item)}.${extFromMime(item.mime)}`;
+  a.download = drawFileName(item);
   document.body.appendChild(a);
   a.click();
   a.remove();
@@ -4365,6 +4557,12 @@ function openPreview(dataUrl) {
   openPreviewList([dataUrl], 0);
 }
 
+/* Same, but the caller knows the picture's real file name — shown top-left
+   and used by the Download button. */
+function openPreviewNamed(dataUrl, name, label) {
+  openPreviewList([{ url: dataUrl, name: name || "", label: label || "" }], 0);
+}
+
 /* Accepts plain data URLs, or {url, label} entries when the caller wants a
    name shown under the picture (used by Show All). */
 function openPreviewList(urls, index) {
@@ -4392,6 +4590,52 @@ function renderPreview() {
   cap.textContent = entry.label || "";
   cap.classList.toggle("visible", !!entry.label);
   cap.title = entry.label || "";
+
+  // Top-left: the image's own file name, as it would be downloaded.
+  const fn = document.getElementById("previewFilename");
+  const fname = previewFilenameFor(entry);
+  fn.textContent = fname;
+  fn.title = fname;
+  fn.classList.toggle("visible", !!fname);
+
+  const dl = document.getElementById("previewDownloadBtn");
+  dl.classList.remove("done");
+  dl.innerHTML = '<span aria-hidden="true">↓</span>Download';
+  dl.style.display = entry.url ? "" : "none";
+  dl.title = fname ? `Download ${fname}` : "Download this image";
+}
+
+/* The name shown top-left and used for the download. Entries carry a `name`
+   when the caller knows the exact file name; otherwise the caption label is
+   used, and the extension comes from the data URL's own mime type. */
+function previewFilenameFor(entry) {
+  if (!entry) return "";
+  if (entry.name) return entry.name;
+  const base = String(entry.label || "").replace(/\s*\(\d+\s+of\s+\d+\)\s*$/, "").trim();
+  if (!base) return "";
+  if (/\.[A-Za-z0-9]{2,5}$/.test(base)) return base;
+  const m = /^data:([^;,]+)[;,]/.exec(String(entry.url || ""));
+  return `${sanitizeFilename(base)}.${extFromMime(m ? m[1] : "image/png")}`;
+}
+
+function downloadCurrentPreview() {
+  if (!previewCtx) return;
+  const entry = previewCtx.urls[previewCtx.index];
+  if (!entry || !entry.url) return;
+  const a = document.createElement("a");
+  a.href = entry.url;
+  a.download = previewFilenameFor(entry) || "image.png";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+
+  const btn = document.getElementById("previewDownloadBtn");
+  btn.classList.add("done");
+  btn.innerHTML = '<span aria-hidden="true">✓</span>Saved';
+  setTimeout(() => {
+    btn.classList.remove("done");
+    btn.innerHTML = '<span aria-hidden="true">↓</span>Download';
+  }, 1400);
 }
 
 function resetPreviewZoom() {
@@ -4462,6 +4706,7 @@ function closePreview() {
   document.getElementById("previewStage").classList.remove("panning", "at-max");
   document.getElementById("previewZoomBadge").classList.remove("visible");
   document.getElementById("previewCaption").classList.remove("visible");
+  document.getElementById("previewFilename").classList.remove("visible");
   document.getElementById("previewImg").src = "";
   previewZoomStep = 0;
   previewCtx = null;
@@ -4541,11 +4786,7 @@ function populateQualityDropdown(preserveValue) {
     options = IDEOGRAM_QUALITY_OPTIONS;
     defaultValue = "DEFAULT";
   } else {
-    options = [
-      { value: "1K", label: "1K" },
-      { value: "2K", label: "2K" },
-      { value: "4K", label: "4K" }
-    ];
+    options = qualityOptionsFor(modelKey);
     defaultValue = "2K";
   }
 
@@ -4620,14 +4861,118 @@ function loadConfigs() {
   } catch { return []; }
 }
 
-/* Configs can now carry a reference image, which is large enough to exhaust
-   the localStorage quota. Rather than failing silently, drop the images and
-   retry so the rest of the config still survives — and say so. */
-function persistConfigs(arr) {
+/* ---------- durable config files (the MyConfigs folder) ----------
+
+   localStorage is a convenience cache, not storage: it is small enough that a
+   single config carrying attachments can exhaust it, and clearing browsing
+   history wipes it. So a config's real home is a self-contained JSON file the
+   user keeps in the project's MyConfigs folder; the cache just makes startup
+   instant.
+
+   The File System Access API would let us write that folder directly, but it
+   is unavailable on file:// pages — which is how this app is opened locally —
+   so the file travels through an ordinary download and comes back through an
+   ordinary file input. */
+const MYCONFIGS_FOLDER = "MyConfigs";
+const CONFIG_FILE_VERSION = 1;
+
+function configFileName(name) {
+  return `${sanitizeFilename(String(name || "config"))}.json`;
+}
+
+function configToFileJSON(cfg) {
+  return JSON.stringify({
+    app: "HowToDraw Image Generator",
+    kind: "config",
+    version: CONFIG_FILE_VERSION,
+    page: currentPage,
+    name: cfg.name,
+    description: cfg.description || "",
+    savedAt: cfg.savedAt || new Date().toISOString(),
+    // Attachments are embedded, so the file stands alone: no broken links and
+    // nothing to re-pick when it is imported on another machine.
+    values: cfg.values
+  }, null, 2);
+}
+
+function downloadTextFile(filename, text, mime) {
+  const blob = new Blob([text], { type: mime || "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+}
+
+function exportConfigFile(cfg) {
+  downloadTextFile(configFileName(cfg.name), configToFileJSON(cfg));
+}
+
+/* Accepts this app's own config files. Returns { cfg, error }. */
+function configFromFileJSON(text, fileName) {
+  let obj;
+  try { obj = JSON.parse(text); }
+  catch (e) { return { error: `${fileName}: not valid JSON (${e.message})` }; }
+  if (!obj || typeof obj !== "object") return { error: `${fileName}: not a config file` };
+  if (obj.kind && obj.kind !== "config") return { error: `${fileName}: not a config file` };
+  if (!obj.values || typeof obj.values !== "object") return { error: `${fileName}: has no saved values` };
+  const name = String(obj.name || fileName.replace(/\.json$/i, "")).trim();
+  if (!name) return { error: `${fileName}: has no config name` };
+  if (obj.page && obj.page !== currentPage) {
+    return { error: `${fileName}: belongs to the "${obj.page}" page, not this one` };
+  }
+  return { cfg: { name, description: String(obj.description || ""), values: obj.values,
+                  savedAt: obj.savedAt || null } };
+}
+
+async function importConfigFiles(fileList) {
+  const files = Array.from(fileList || []).filter(f => /\.json$/i.test(f.name));
+  if (files.length === 0) return;
+  const configs = loadConfigs();
+  const errors = [];
+  let added = 0, replaced = 0;
+
+  for (const f of files) {
+    let text;
+    try { text = await f.text(); }
+    catch (e) { errors.push(`${f.name}: ${e.message || e}`); continue; }
+    const { cfg, error } = configFromFileJSON(text, f.name);
+    if (error) { errors.push(error); continue; }
+    const idx = configs.findIndex(c => c.name === cfg.name);
+    if (idx >= 0) { configs[idx] = cfg; replaced++; } else { configs.push(cfg); added++; }
+  }
+
+  if (added || replaced) {
+    persistConfigs(configs, { quiet: true });
+    renderConfigsMenu();
+    refreshSaveConfigStatus();
+  }
+  alert(
+    `Imported ${added + replaced} config${added + replaced === 1 ? "" : "s"}` +
+    (replaced ? ` (${replaced} replaced an existing one)` : "") + "." +
+    (errors.length ? `\n\nSkipped:\n${errors.map(e => "• " + e).join("\n")}` : "")
+  );
+}
+
+function exportAllConfigs() {
+  const configs = loadConfigs();
+  if (configs.length === 0) { alert("There are no saved configs to export."); return; }
+  configs.forEach((c, i) => setTimeout(() => exportConfigFile(c), i * 250));
+}
+
+/* Writing the cache is best-effort. A config carrying attachments can exceed
+   the quota; when that happens the settings are still cached (attachments
+   stripped) and the caller is told to keep the file instead — the config
+   itself is never lost, because the file is the durable copy. */
+function persistConfigs(arr, opts) {
+  const quiet = !!(opts && opts.quiet);
   const key = configStorageKeyFor(currentPage);
   try {
     localStorage.setItem(key, JSON.stringify(arr));
-    return true;
+    return { ok: true, stripped: false };
   } catch (e) {
     console.warn("Failed to persist configs:", e);
     try {
@@ -4635,15 +4980,19 @@ function persistConfigs(arr) {
         ? { ...c, values: { ...c.values, refImages: [], refImage: null } }
         : c);
       localStorage.setItem(key, JSON.stringify(stripped));
-      alert(
-        "Browser storage is full, so the configs were saved WITHOUT their reference images.\n\n" +
-        "Delete some saved configs and save again to keep the image."
-      );
-      return true;
+      if (!quiet) {
+        alert(
+          `This browser's cache is too small to hold the attachments, so only the settings were cached.\n\n` +
+          `The full config — attachments included — has been saved as a file. Move it into the ` +
+          `project's ${MYCONFIGS_FOLDER} folder, and use "Import from ${MYCONFIGS_FOLDER}" in the ` +
+          `Configs menu to bring it back.`
+        );
+      }
+      return { ok: true, stripped: true };
     } catch (e2) {
       console.warn("Failed to persist configs even without images:", e2);
-      alert("Could not save the config — this browser's storage is full.");
-      return false;
+      if (!quiet) alert("Could not cache the config — this browser's storage is full. Keep the saved file instead.");
+      return { ok: false, stripped: true };
     }
   }
 }
@@ -4846,7 +5195,8 @@ function renderConfigsMenu() {
     const name = document.createElement("span");
     name.className = "name";
     name.textContent = cfg.name;
-    name.title = cfg.name;
+    // The description is what the tooltip is for — the name is already visible.
+    name.title = cfg.description ? `${cfg.name}\n\n${cfg.description}` : cfg.name;
     name.addEventListener("click", () => {
       applyConfigValues(cfg.values, cfg.name);
       menu.classList.remove("open");
@@ -4854,29 +5204,62 @@ function renderConfigsMenu() {
     item.appendChild(name);
 
     if (!cfg.locked) {
-      const del = document.createElement("button");
-      del.className = "del";
-      del.type = "button";
-      del.innerHTML = "&times;";
-      del.title = "Delete this config";
-      if (isSelected) del.style.color = "#fff";
-      del.addEventListener("click", (e) => {
+      // Edit replaces the old ✕: renaming, re-describing and deleting all live
+      // in the one dialog, so a stray click can no longer destroy a config.
+      const edit = document.createElement("button");
+      edit.className = "del";
+      edit.type = "button";
+      edit.textContent = "✎";
+      edit.title = "Edit this config's name and description";
+      if (isSelected) edit.style.color = "#fff";
+      edit.addEventListener("click", (e) => {
         e.stopPropagation();
-        const userIdx = userConfigs.findIndex(c => c.name === cfg.name);
-        if (userIdx >= 0) deleteConfig(userIdx);
+        menu.classList.remove("open");
+        openSaveModal({ mode: "edit", name: cfg.name });
       });
-      item.appendChild(del);
+      item.appendChild(edit);
     }
 
     menu.appendChild(item);
   });
+
+  // Durable storage lives in files, so the menu is where they come and go.
+  const tools = document.createElement("div");
+  tools.className = "item configs-tools";
+  tools.style.cssText = "--item-bg:#eef2f7;display:flex;gap:6px;justify-content:space-between;";
+
+  const imp = document.createElement("button");
+  imp.type = "button";
+  imp.className = "configs-tool-btn";
+  imp.textContent = `⬆ Import from ${MYCONFIGS_FOLDER}`;
+  imp.title = `Load one or more <name>.json config files from the ${MYCONFIGS_FOLDER} folder`;
+  imp.addEventListener("click", (e) => {
+    e.stopPropagation();
+    menu.classList.remove("open");
+    document.getElementById("configImportInput").click();
+  });
+
+  const exp = document.createElement("button");
+  exp.type = "button";
+  exp.className = "configs-tool-btn";
+  exp.textContent = "⬇ Export all";
+  exp.title = `Save every config as its own .json file to keep in ${MYCONFIGS_FOLDER}`;
+  exp.addEventListener("click", (e) => {
+    e.stopPropagation();
+    menu.classList.remove("open");
+    exportAllConfigs();
+  });
+
+  tools.append(imp, exp);
+  menu.appendChild(tools);
 }
 
 function deleteConfig(idx) {
   const configs = loadConfigs();
   const wasSelected = configs[idx] && configs[idx].name === selectedConfigName;
   configs.splice(idx, 1);
-  persistConfigs(configs);
+  // Removing can only free space, so a quota warning here would be noise.
+  persistConfigs(configs, { quiet: true });
   if (wasSelected) selectedConfigName = DEFAULT_CONFIG_NAME;
   renderConfigsMenu();
   refreshSaveConfigStatus();
@@ -4898,12 +5281,26 @@ function findConfigByValues(values) {
 
 let justSavedValues = null;
 
+/* The action button reads "Update Config" whenever a saved config is selected
+   and the values on screen have drifted from it — pressing it then overwrites
+   that config rather than asking for a new name. */
 function refreshSaveConfigStatus() {
   const isIG = currentPage === "imagegen";
   const warn = document.getElementById(isIG ? "igSaveConfigWarning" : "saveConfigWarning");
   const btn = document.getElementById(isIG ? "igSaveConfigBtn" : "saveConfigBtn");
   const current = snapshotConfig();
   btn.disabled = false;
+
+  // The built-in Default Config is locked, so drifting from it is a Save, not
+  // an Update — only a user-created config can be overwritten.
+  const selected = getSelectedConfigEntry();
+  const editable = selected && selected.name !== DEFAULT_CONFIG_NAME ? selected : null;
+  const isUpdate = !!editable && !valuesEqual(editable.values, current);
+  btn.textContent = isUpdate ? "Update Config" : "Save Config";
+  btn.title = isUpdate
+    ? `Overwrite "${editable.name}" with the settings currently on screen`
+    : "Save these settings as a config";
+
   if (justSavedValues && valuesEqual(justSavedValues, current)) {
     warn.textContent = "";
     warn.classList.remove("visible");
@@ -4912,7 +5309,9 @@ function refreshSaveConfigStatus() {
   }
   justSavedValues = null;
   const match = loadConfigs().find(c => valuesEqual(c.values, current));
-  if (match) {
+  // Only worth flagging when it is some OTHER config that already holds these
+  // exact values; matching the selected one is the normal, unremarkable case.
+  if (match && (!selected || match.name !== selected.name)) {
     warn.textContent = `This config was saved before under the name of '${match.name}'`;
     warn.classList.add("visible");
   } else {
@@ -4937,12 +5336,10 @@ function refreshSaveModalNameStatus() {
     return;
   }
   const configs = loadConfigs();
-  let taken;
-  if (saveModalMode === "update") {
-    taken = configs.some(c => c.name !== saveModalUpdatingName && c.name === name);
-  } else {
-    taken = configs.some(c => c.name === name);
-  }
+  // Update and Edit both keep their own name; only a new save must be unique.
+  const taken = saveModalUpdatingName
+    ? configs.some(c => c.name !== saveModalUpdatingName && c.name === name)
+    : configs.some(c => c.name === name);
   if (taken) {
     warn.classList.add("visible");
     confirmBtn.disabled = true;
@@ -4952,22 +5349,53 @@ function refreshSaveModalNameStatus() {
   }
 }
 
-function openSaveModal() {
+/* The modal serves three jobs:
+
+   "save"   — a brand-new config from the values on screen
+   "update" — overwrite the selected config with the values on screen
+   "edit"   — rename / re-describe / delete an existing config, WITHOUT
+              touching the values it stores (opened from the ✎ in the menu)  */
+function openSaveModal(opts) {
+  const mode = (opts && opts.mode) || null;
+  const targetName = opts && opts.name;
+  const configs = loadConfigs();
   const current = snapshotConfig();
-  const matching = loadConfigs().find(c => valuesEqual(c.values, current));
-  if (matching) {
-    saveModalMode = "update";
-    saveModalUpdatingName = matching.name;
-    document.getElementById("saveModalTitle").textContent = "Update Config";
-    document.getElementById("saveConfirmBtn").textContent = "Update";
-    document.getElementById("saveNameInput").value = matching.name;
+
+  let existing = null;
+  if (mode === "edit") {
+    existing = configs.find(c => c.name === targetName) || null;
+    if (!existing) return;
+    saveModalMode = "edit";
   } else {
-    saveModalMode = "save";
-    saveModalUpdatingName = null;
-    document.getElementById("saveModalTitle").textContent = "Save Config";
-    document.getElementById("saveConfirmBtn").textContent = "Save";
-    document.getElementById("saveNameInput").value = "";
+    // Prefer the selected config when its values have drifted (an update);
+    // otherwise fall back to an exact value match.
+    existing = (selectedConfigName !== DEFAULT_CONFIG_NAME
+        ? configs.find(c => c.name === selectedConfigName) : null)
+      || configs.find(c => valuesEqual(c.values, current))
+      || null;
+    saveModalMode = existing ? "update" : "save";
   }
+  saveModalUpdatingName = existing ? existing.name : null;
+
+  const titles = { save: "Save Config", update: "Update Config", edit: "Edit Config" };
+  const confirms = { save: "Save", update: "Update", edit: "Save changes" };
+  document.getElementById("saveModalTitle").textContent = titles[saveModalMode];
+  document.getElementById("saveConfirmBtn").textContent = confirms[saveModalMode];
+  document.getElementById("saveNameInput").value = existing ? existing.name : "";
+  document.getElementById("saveDescInput").value = existing ? (existing.description || "") : "";
+  // Delete only makes sense against a config that already exists.
+  document.getElementById("saveDeleteBtn").style.display = existing ? "" : "none";
+
+  /* Offer the file copy by default whenever this save would carry attachments,
+     since that is exactly the case the cache cannot hold. */
+  const valuesForFile = saveModalMode === "edit" ? existing.values : current;
+  const hasAttachments = toRefImageList(valuesForFile && valuesForFile.refImages).length > 0;
+  const chk = document.getElementById("saveToFileChk");
+  chk.checked = hasAttachments;
+  document.getElementById("saveToFileLabel").textContent =
+    `Also save ${configFileName(existing ? existing.name : "config")} for ${MYCONFIGS_FOLDER}`;
+  document.getElementById("saveFileNote").style.display = "";
+
   document.getElementById("saveModal").classList.add("visible");
   refreshSaveModalNameStatus();
   setTimeout(() => {
@@ -4984,34 +5412,68 @@ function closeSaveModal() {
 
 function confirmSaveConfig() {
   const name = document.getElementById("saveNameInput").value.trim();
+  const description = document.getElementById("saveDescInput").value.trim();
+  const alsoFile = document.getElementById("saveToFileChk").checked;
   if (!name || name === DEFAULT_CONFIG_NAME) return;
   const configs = loadConfigs();
+  let saved = null;
 
-  if (saveModalMode === "update") {
+  if (saveModalMode === "edit") {
+    // Name and description only — the stored values are left exactly as they are.
     if (name !== saveModalUpdatingName && configs.some(c => c.name === name)) return;
     const idx = configs.findIndex(c => c.name === saveModalUpdatingName);
     if (idx < 0) { closeSaveModal(); return; }
-    configs[idx].name = name;
-    persistConfigs(configs);
+    const wasSelected = selectedConfigName === saveModalUpdatingName;
+    configs[idx] = { ...configs[idx], name, description };
+    saved = configs[idx];
+    if (wasSelected) selectedConfigName = name;
+  } else if (saveModalMode === "update") {
+    if (name !== saveModalUpdatingName && configs.some(c => c.name === name)) return;
+    const idx = configs.findIndex(c => c.name === saveModalUpdatingName);
+    if (idx < 0) { closeSaveModal(); return; }
+    const values = snapshotConfig();
+    configs[idx] = { ...configs[idx], name, description, values, savedAt: new Date().toISOString() };
+    saved = configs[idx];
     selectedConfigName = name;
-    justSavedValues = configs[idx].values;
+    justSavedValues = values;
   } else {
     if (configs.some(c => c.name === name)) return;
     const values = snapshotConfig();
-    if (configs.some(c => valuesEqual(c.values, values))) {
-      closeSaveModal();
-      refreshSaveConfigStatus();
-      return;
-    }
-    configs.push({ name, values });
-    persistConfigs(configs);
+    saved = { name, description, values, savedAt: new Date().toISOString() };
+    configs.push(saved);
     selectedConfigName = name;
     justSavedValues = values;
   }
 
+  // The file is written first: if the cache then rejects the attachments, the
+  // durable copy already exists and nothing has been lost.
+  if (alsoFile && saved) exportConfigFile(saved);
+  const res = persistConfigs(configs, { quiet: alsoFile });
+  if (!alsoFile && res.stripped && saved) exportConfigFile(saved);
+
   renderConfigsMenu();
   closeSaveModal();
   refreshSaveConfigStatus();
+}
+
+async function deleteConfigFromModal() {
+  if (!saveModalUpdatingName) return;
+  const configs = loadConfigs();
+  const idx = configs.findIndex(c => c.name === saveModalUpdatingName);
+  if (idx < 0) { closeSaveModal(); return; }
+  const cfg = configs[idx];
+  const ok = await showConfirm({
+    title: `Delete "${cfg.name}"?`,
+    okLabel: "Delete",
+    bodyHtml:
+      `<p>This removes the config from this browser.</p>` +
+      (cfg.description ? `<p style="color:#6b7280;font-style:italic;">${escapeHtml(cfg.description)}</p>` : "") +
+      `<p style="margin-top:10px;">Any <code>${escapeHtml(configFileName(cfg.name))}</code> you already saved ` +
+      `in ${MYCONFIGS_FOLDER} is untouched, so you can import it again later.</p>`
+  });
+  if (!ok) return;
+  deleteConfig(idx);
+  closeSaveModal();
 }
 
 /* ===========================================================
@@ -5234,6 +5696,8 @@ const IG_MODEL_SLUG = {
   pro: "NanoBananaPro",
   v2: "NanoBanana2",
   openai_image_2: "GPT",
+  openai_image_25_sunburst: "GPT25Sunburst",
+  openai_image_25_flare: "GPT25Flare",
   ideogram_v3: "Ideogram"
 };
 
@@ -5249,6 +5713,8 @@ function igQualityLabel(quality, modelKey) {
     const opt = IDEOGRAM_QUALITY_OPTIONS.find(o => o.value === quality);
     if (opt) return opt.label;
   }
+  // "4K_MAX" would read as two segments in a file name; keep it one token.
+  if (quality === "4K_MAX") return "4KMax";
   return String(quality || "");
 }
 
@@ -6362,7 +6828,7 @@ function igMakeThumb(img, onRemove) {
   const inner = document.createElement("div");
   inner.className = "ig-thumb-inner";
   inner.title = "Click to preview — " + img.name;
-  inner.onclick = () => openPreview(img.dataUrl);
+  inner.onclick = () => openPreviewNamed(img.dataUrl, img.name, img.name);
 
   const im = document.createElement("img");
   im.src = img.dataUrl;
@@ -6781,7 +7247,14 @@ function igAttachSwipe(thumb, item) {
 // the modal walk the rest of that card's variations.
 function igOpenPreview(item) {
   if (!item.variants || item.variants.length === 0) return;
-  openPreviewList(item.variants.map(v => v.dataUrl), item.activeVariant);
+  openPreviewList(
+    item.variants.map((v, i) => ({
+      url: v.dataUrl,
+      name: igVariantFilename(item, i),
+      label: item.variants.length > 1 ? `${item.name}  (${i + 1} of ${item.variants.length})` : item.name
+    })),
+    item.activeVariant
+  );
 }
 
 function igUpdateErrorBanner() {
@@ -6812,6 +7285,7 @@ function igCollectAllImages() {
     item.variants.forEach((v, i) => {
       out.push({
         url: v.dataUrl,
+        name: igVariantFilename(item, i),
         label: item.variants.length > 1
           ? `${item.name}  (${i + 1} of ${item.variants.length})`
           : item.name
@@ -6843,7 +7317,7 @@ function igShowAll() {
 function collectAllImages() {
   return state.items
     .filter(i => i.status === "done" && i.dataUrl)
-    .map(i => ({ url: i.dataUrl, label: drawFileBaseName(i) }));
+    .map(i => ({ url: i.dataUrl, name: drawFileName(i), label: drawFileBaseName(i) }));
 }
 
 function updateShowAllBtn() {
@@ -7756,9 +8230,7 @@ function igPopulateQualityDropdown(preserveValue) {
   const prev = preserveValue !== undefined ? preserveValue : sel.value;
   sel.innerHTML = "";
   const isIdeogram = modelKey === "ideogram_v3";
-  const options = isIdeogram
-    ? IDEOGRAM_QUALITY_OPTIONS
-    : [{ value: "1K", label: "1K" }, { value: "2K", label: "2K" }, { value: "4K", label: "4K" }];
+  const options = isIdeogram ? IDEOGRAM_QUALITY_OPTIONS : qualityOptionsFor(modelKey);
   const defaultValue = isIdeogram ? "DEFAULT" : "2K";
   for (const opt of options) {
     const o = document.createElement("option");
@@ -7804,15 +8276,25 @@ previewStage.addEventListener("mousemove", previewPan);
 previewStage.addEventListener("mouseleave", () => previewStage.classList.remove("panning"));
 document.getElementById("previewPrev").addEventListener("click", (e) => { e.stopPropagation(); previewStep(-1); });
 document.getElementById("previewNext").addEventListener("click", (e) => { e.stopPropagation(); previewStep(1); });
+// Must not bubble to the backdrop handler, which would close the preview.
+document.getElementById("previewDownloadBtn").addEventListener("click", (e) => {
+  e.stopPropagation();
+  downloadCurrentPreview();
+});
 
 document.getElementById("model").addEventListener("change", () => {
   populateAspectDropdown();
   populateQualityDropdown();
 });
 
-document.getElementById("saveConfigBtn").addEventListener("click", openSaveModal);
+document.getElementById("saveConfigBtn").addEventListener("click", () => openSaveModal());
 document.getElementById("saveCancelBtn").addEventListener("click", closeSaveModal);
 document.getElementById("saveConfirmBtn").addEventListener("click", confirmSaveConfig);
+document.getElementById("saveDeleteBtn").addEventListener("click", deleteConfigFromModal);
+document.getElementById("configImportInput").addEventListener("change", async (e) => {
+  await importConfigFiles(e.target.files);
+  e.target.value = "";
+});
 document.getElementById("saveNameInput").addEventListener("input", refreshSaveModalNameStatus);
 document.getElementById("saveNameInput").addEventListener("keydown", (e) => {
   if (e.key === "Enter") confirmSaveConfig();
@@ -7905,7 +8387,7 @@ document.getElementById("igShowAllBtn").addEventListener("click", igShowAll);
 document.getElementById("showAllBtn").addEventListener("click", showAllDraw);
 document.getElementById("igCostReset").addEventListener("click", resetCostCounter);
 document.getElementById("igBalanceAmount").addEventListener("click", promptSetBalance);
-document.getElementById("igSaveConfigBtn").addEventListener("click", openSaveModal);
+document.getElementById("igSaveConfigBtn").addEventListener("click", () => openSaveModal());
 
 // Typing gates the green button and (in bulk) re-validates against the CSV.
 document.getElementById("igPrompt").addEventListener("input", igRefreshModeUI);
